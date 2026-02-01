@@ -11,6 +11,7 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 
 import kr.mmv.mjusugangsincheonghelper.sectionsync.listener.SectionSyncChangeListener;
+import kr.mmv.mjusugangsincheonghelper.sectionsync.service.SectionSyncService;
 
 /**
  * Section 도메인 Redis Pub/Sub 설정
@@ -18,13 +19,21 @@ import kr.mmv.mjusugangsincheonghelper.sectionsync.listener.SectionSyncChangeLis
  * 크롤러가 "mju:section:change" 채널에 메시지를 발행하면 수신하여 처리
  * 
  * 활성화/비활성화:
- * redis.listener.section.enabled=true|false (application.yml)
+ * app.feature.section-sync.enabled=true|false
  */
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-@ConditionalOnProperty(value = "redis.listener.section.enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(value = "app.feature.section-sync.enabled", havingValue = "true", matchIfMissing = false)
 public class SectionSyncRedisConfig {
+
+    /**
+     * 강의 변경 이벤트 리스너 빈 등록
+     */
+    @Bean
+    public SectionSyncChangeListener sectionSyncChangeListener(SectionSyncService sectionSyncService) {
+        return new SectionSyncChangeListener(sectionSyncService);
+    }
 
     /**
      * 강의 변경 이벤트 토픽

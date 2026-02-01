@@ -155,15 +155,6 @@ public class MjuUnivAuthService {
         }
     }
 
-    private MjuErrorResponse parseError(String body) {
-        try {
-            // data 필드 등 복잡한 구조 무시하고 에러 코드만 추출
-            return objectMapper.readValue(body, MjuErrorResponse.class);
-        } catch (Exception e) {
-            log.error("[MJU-Auth] Failed to parse error response body: {}", e.getMessage());
-            return null;
-        }
-    }
 
     private void validateInput(String studentId) {
         if (studentId == null || !studentId.startsWith("60")) {

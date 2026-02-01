@@ -1,3 +1,6 @@
+# ===================================
+# 1. Framework & Standard Libraries
+# ===================================
 spring:
   application:
     name: mju-sugangsincheong-helper
@@ -38,18 +41,6 @@ server:
   servlet:
     context-path: /
 
-# JWT Configuration
-jwt:
-  secret: ThisIsASecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLongForHS256Algorithm
-  expiration: 1209600000       # 14일 (밀리초)
-  refresh-expiration: 1209600000  # 14일
-
-# MJU Auth API
-mju:
-  auth:
-    base-url: https://mju-univ-auth.shinnk.mmv.kr
-    timeout: 30000  # 30초
-
 # Swagger/OpenAPI
 springdoc:
   api-docs:
@@ -70,7 +61,7 @@ logging:
     root: INFO
     com.example.demo: DEBUG
     org.springframework.security: DEBUG
-    org.hibernate.SQL: INFO
+    org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
 # Actuator
@@ -83,15 +74,16 @@ management:
     health:
       show-details: always
 
-# Section Change Listener
-redis:
-  listener:
-    section:
-      enabled: true
 
-
-
+# ===================================
+# 2. Application Custom Settings
+# ===================================
 app:
+  jwt:
+    secret: ThisIsASecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLongForHS256Algorithm
+    expiration: 1209600000       # 14일 (밀리초)
+    refresh-expiration: 1209600000  # 14일
+
   mju-univ-auth:
     base-url: https://mju-univ-auth.shinnk.mmv.kr
     timeout: 30000  # 30초

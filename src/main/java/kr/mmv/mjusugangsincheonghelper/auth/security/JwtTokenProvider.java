@@ -21,13 +21,13 @@ import java.util.*;
 @Component
 public class JwtTokenProvider {
 
-    @Value("${jwt.secret}")
+    @Value("${app.jwt.secret}")
     private String secretKeyString;
 
-    @Value("${jwt.expiration:3600000}")
+    @Value("${app.jwt.expiration:3600000}")
     private long expirationMs;
 
-    @Value("${jwt.refresh-expiration:604800000}")
+    @Value("${app.jwt.refresh-expiration:604800000}")
     private long refreshExpirationMs;
 
     private SecretKey secretKey;
