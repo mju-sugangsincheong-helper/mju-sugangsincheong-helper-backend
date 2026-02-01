@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # 1. Main Database (MySQL 8.0) - H2 대신 로컬에서도 MySQL 사용 권장 (방언 차이 방지)
+  mysql-dev:
+    image: mysql:8.0
+    container_name: mju-sugangsincheong-helper-mysql-dev
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mju-sugangsincheong-helper-db-dev
+      MYSQL_USER: devuser
+      MYSQL_PASSWORD: devpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password
+  # 2. Redis (Cache & Event Broker)
+  redis-dev:
+    image: redis:alpine
+    container_name: mju-sugangsincheong-helper-redis-dev
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes # 데이터 지속성 확보
+
+  # 3. Redis GUI (Redis Commander) - 눈으로 데이터 확인용
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: mju-sugangsincheong-helper-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis-dev:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis-dev
+  

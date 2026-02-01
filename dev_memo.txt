@@ -1,0 +1,12 @@
+docker compose -f docker-compose.yml up -d
+sleep 2
+docker exec -i mju-sugangsincheong-helper-redis-dev redis-cli monitor | awk 'length($0) > 100 { print substr($0,1,100) "..."; next } 1'
+
+
+# start mock crawler
+python mock-crawler.py
+
+
+# url
+echo "redis commands monitor: http://localhost:8081"
+echo "swagger-ui: http://localhost:8080/swagger-ui/index.html"

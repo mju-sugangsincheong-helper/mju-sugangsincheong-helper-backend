@@ -1,0 +1,41 @@
+{
+  "utcOffset": "+09:00",
+  "schedules": [
+    {
+      "name": "장바구니(미리담기) 기간",
+      "dateStart": "2026-02-02",
+      "dateEnd": "2026-02-06",
+      "timeStart": "10:30",
+      "timeEnd": "16:45",
+      "crawlIntervalSec": 30,
+      "notifyEnabled": false
+    },
+    {
+      "name": "ICT 공과대학 수강신청",
+      "dateStart": "2026-02-13",
+      "dateEnd": "2026-02-13",
+      "timeStart": "10:30",
+      "timeEnd": "16:45",
+      "crawlIntervalSec": 9,
+      "notifyEnabled": true
+    },
+    {
+      "name": "전학년/전학과 수강신청",
+      "dateStart": "2026-02-24",
+      "dateEnd": "2026-02-24",
+      "timeStart": "10:30",
+      "timeEnd": "16:45",
+      "crawlIntervalSec": 9,
+      "notifyEnabled": true
+    },
+    {
+      "name": "수강신청 변경(정정) 기간",
+      "dateStart": "2026-03-03",
+      "dateEnd": "2026-03-06",
+      "timeStart": "10:30",
+      "timeEnd": "17:45",
+      "crawlIntervalSec": 15,
+      "notifyEnabled": true
+    }
+  ]
+}

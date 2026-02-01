@@ -1,0 +1,96 @@
+spring:
+  application:
+    name: mju-sugangsincheong-helper
+
+  # MySQL Database (Docker Compose)
+  datasource:
+    url: jdbc:mysql://localhost:3306/mju-sugangsincheong-helper-db-dev?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: devuser
+    password: devpassword
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    # show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
+
+  # Redis (Docker Compose)
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 60000ms
+
+# Server
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# JWT Configuration
+jwt:
+  secret: ThisIsASecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLongForHS256Algorithm
+  expiration: 1209600000       # 14일 (밀리초)
+  refresh-expiration: 1209600000  # 14일
+
+# MJU Auth API
+mju:
+  auth:
+    base-url: https://mju-univ-auth.shinnk.mmv.kr
+    timeout: 30000  # 30초
+
+# Test credentials (환경변수로 주입)
+test:
+  credentials:
+    student-id: ${TEST_STUDENT_ID:}
+    password: ${TEST_STUDENT_PW:}
+
+# Swagger/OpenAPI
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+    try-it-out-enabled: true
+    filter: true
+    disable-swagger-default-url: true
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.example.demo: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Section Change Listener
+redis:
+  listener:
+    section:
+      enabled: true
