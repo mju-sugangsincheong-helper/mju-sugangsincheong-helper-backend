@@ -11,3 +11,5 @@ bash dev_env_start.sh
 or
 zsh dev_env_start.sh
 ```
+
+### 기본 브랜치 dev
