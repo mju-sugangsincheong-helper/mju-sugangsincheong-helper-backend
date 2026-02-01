@@ -19,9 +19,9 @@ sleep 3
 
 REDIS_MONITOR_PID=$!
 
-# 3. Crawler
+# 3. Crawler (Logs from container)
 (
-  python mock-crawler.py 2>&1 | \
+  docker logs -f mju-sugangsincheong-helper-mock-crawler 2>&1 | \
   awk '{print "\033[32m[crawler]\033[0m " $0}'
 ) &
 

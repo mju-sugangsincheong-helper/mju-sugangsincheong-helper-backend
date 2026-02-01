@@ -12,11 +12,12 @@ import json
 import time
 import random
 import logging
+import os
 from pathlib import Path
 from redis import Redis, ConnectionError
 
 # ==================== CONFIGURATION ====================
-REDIS_HOST = "localhost"
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = 6379
 DATA_FILE = Path("data/resource/sample_past_lecture_result_2026_1.json")
 INTERVAL_SEC = 5

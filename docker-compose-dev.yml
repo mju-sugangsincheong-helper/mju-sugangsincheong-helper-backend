@@ -33,4 +33,19 @@ services:
       - "8081:8081"
     depends_on:
       - redis-dev
+
+  # 4. Mock Crawler (Python)
+  mock-crawler:
+    image: python:3.11-slim
+    container_name: mju-sugangsincheong-helper-mock-crawler
+    working_dir: /app
+    environment:
+      - REDIS_HOST=redis-dev
+    volumes:
+      - ./mock-crawler.py:/app/mock-crawler.py
+      - ./data:/app/data
+    depends_on:
+      - redis-dev
+    command: >
+      sh -c "pip install -q redis && python -u mock-crawler.py"
   
