@@ -10,6 +10,17 @@ doc/contribute_guideline.md
 bash dev_env_start.sh
 or
 zsh dev_env_start.sh
+
+-> 
+
+spring start
+
+
+->
+api 테스트
+http://localhost:8080/swagger-ui/index.html
 ```
+
+
 
 ### 기본 브랜치 dev
