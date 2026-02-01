@@ -31,7 +31,7 @@ public class MjuUnivAuthService {
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${mju.auth.base-url}")
+    @Value("${app.mju-univ-auth.base-url}")
     private String baseUrl;
 
     private static final String PATH_BASIC_INFO = "/api/v1/student-basicinfo";

@@ -38,18 +38,6 @@ server:
   servlet:
     context-path: /
 
-# JWT Configuration
-jwt:
-  secret: ${JWT_SECRET}
-  expiration: 1209600000       # 14일
-  refresh-expiration: 1209600000
-
-# MJU Auth API
-mju:
-  auth:
-    base-url: https://mju-univ-auth.shinnk.mmv.kr
-    timeout: 30000
-
 # Swagger/OpenAPI (Production - disabled)
 springdoc:
   api-docs:
@@ -72,3 +60,20 @@ management:
   endpoint:
     health:
       show-details: never
+
+# ===================================
+# 2. Application Custom Settings
+# ===================================
+app:
+  jwt:
+    secret: ThisIsASecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLongForHS256Algorithm
+    expiration: 3600000       # 1시간
+    refresh-expiration: 1209600000    # 14일
+
+  mju-univ-auth:
+    base-url: https://mju-univ-auth.shinnk.mmv.kr
+    timeout: 30000
+
+  feature: # 기능 플래그 설정 : aync 동작 활성화 비활성화
+    section-sync:
+      enabled: true
