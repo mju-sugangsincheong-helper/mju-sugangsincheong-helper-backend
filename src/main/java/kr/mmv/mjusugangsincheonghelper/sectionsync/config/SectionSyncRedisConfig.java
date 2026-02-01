@@ -19,12 +19,12 @@ import kr.mmv.mjusugangsincheonghelper.sectionsync.service.SectionSyncService;
  * 크롤러가 "mju:section:change" 채널에 메시지를 발행하면 수신하여 처리
  * 
  * 활성화/비활성화:
- * app.feature.section-sync.enabled=true|false
+ * app.section-sync.enabled=true|false
  */
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-@ConditionalOnProperty(value = "app.feature.section-sync.enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(value = "app.section-sync.enabled", havingValue = "true", matchIfMissing = false)
 public class SectionSyncRedisConfig {
 
     /**

@@ -34,7 +34,7 @@ public class StatisticServiceImpl implements StatisticService {
      */
     @Override
     @Transactional
-    @Cacheable(value = "stats", key = "'all'", cacheManager = "statisticCacheManager", sync = true)
+    @Cacheable(value = "mju:stats", key = "'all'", cacheManager = "statisticCacheManager", sync = true)
     public Map<String, Object> getSubscriptionStats() {
 
         // 1. [Calculation & Persistence] DB에서 전체 집계 및 갱신 (Upsert)

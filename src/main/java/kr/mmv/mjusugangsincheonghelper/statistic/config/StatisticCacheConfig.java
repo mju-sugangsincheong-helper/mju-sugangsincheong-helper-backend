@@ -1,6 +1,8 @@
 package kr.mmv.mjusugangsincheonghelper.statistic.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -13,12 +15,16 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import java.time.Duration;
 
 @Configuration
+@EnableCaching
 public class StatisticCacheConfig {
+
+    @Value("${app.statistic.ttl-seconds:19}")
+    private int ttlSeconds;
 
     @Bean("statisticCacheManager")
     public CacheManager statisticCacheManager(RedisConnectionFactory connectionFactory) {
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofSeconds(19)) // TTL 19초 (문서 기준)
+                .entryTtl(Duration.ofSeconds(ttlSeconds)) // TTL 설정 값에 따라 (기본 19초)
                 .disableCachingNullValues()
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));

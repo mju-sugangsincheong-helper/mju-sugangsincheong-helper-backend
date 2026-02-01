@@ -74,6 +74,6 @@ app:
     base-url: https://mju-univ-auth.shinnk.mmv.kr
     timeout: 30000
 
-  feature: # 기능 플래그 설정 : aync 동작 활성화 비활성화
-    section-sync:
-      enabled: true
+  # 기능 플래그 설정 : aync 동작 활성화 비활성화
+  section-sync:
+    enabled: true
