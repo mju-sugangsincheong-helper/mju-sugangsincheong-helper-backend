@@ -36,14 +36,14 @@ services:
 
   # 4. Mock Crawler (Python)
   mock-crawler:
-    image: python:3.11-slim
+    image: python:3.13-slim
     container_name: mju-sugangsincheong-helper-mock-crawler
     working_dir: /app
     environment:
       - REDIS_HOST=redis-dev
     volumes:
       - ./mock-crawler.py:/app/mock-crawler.py
-      - ./data:/app/data
+      - ./data/resource:/app/data/resource
     depends_on:
       - redis-dev
     command: >
