@@ -8,7 +8,6 @@ import org.springframework.stereotype.Repository;
 import kr.mmv.mjusugangsincheonghelper.global.entity.Section;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Section Repository

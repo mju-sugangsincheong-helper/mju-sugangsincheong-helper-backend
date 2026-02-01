@@ -12,7 +12,6 @@ import kr.mmv.mjusugangsincheonghelper.studentdevice.dto.DeviceRegisterRequestDt
 import kr.mmv.mjusugangsincheonghelper.studentdevice.dto.DeviceResponseDto;
 import kr.mmv.mjusugangsincheonghelper.studentdevice.service.StudentDeviceService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
