@@ -188,7 +188,7 @@ public class Section {
     private Boolean isFull = false;
 
     /**
-     * 활성화 여부 (폐강 시 false)
+     * 활성화 여부 (폐강 시 false) (폐강 여부는 crawler 에서 없으면 자동으로 false 가 된다)
      */
     @Column(name = "is_active")
     @Builder.Default

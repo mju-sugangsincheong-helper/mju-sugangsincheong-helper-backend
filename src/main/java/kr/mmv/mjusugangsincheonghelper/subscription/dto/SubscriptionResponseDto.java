@@ -29,6 +29,7 @@ public class SubscriptionResponseDto {
     private Integer takelim;        // 정원
     private Integer listennow;      // 현재 신청인원
     private Boolean isFull;         // 만석 여부
+    private Boolean isActive;       // 활성화 여부
     private Boolean notificationEnabled;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -53,6 +54,7 @@ public class SubscriptionResponseDto {
                 .takelim(subscription.getSection().getTakelim())
                 .listennow(subscription.getSection().getListennow())
                 .isFull(subscription.getSection().getIsFull())
+                .isActive(subscription.getSection().getIsActive())
                 .notificationEnabled(subscription.getNotificationEnabled())
                 .createdAt(subscription.getCreatedAt())
                 .build();
