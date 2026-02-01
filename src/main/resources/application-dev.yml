@@ -50,12 +50,6 @@ mju:
     base-url: https://mju-univ-auth.shinnk.mmv.kr
     timeout: 30000  # 30초
 
-# Test credentials (환경변수로 주입)
-test:
-  credentials:
-    student-id: ${TEST_STUDENT_ID:}
-    password: ${TEST_STUDENT_PW:}
-
 # Swagger/OpenAPI
 springdoc:
   api-docs:
@@ -93,4 +87,16 @@ management:
 redis:
   listener:
     section:
+      enabled: true
+
+
+
+app:
+  mju-univ-auth:
+    base-url: https://mju-univ-auth.shinnk.mmv.kr
+    timeout: 30000  # 30초
+  
+
+  feature: # 기능 플래그 설정 : aync 동작 활성화 비활성화
+    section-sync:
       enabled: true

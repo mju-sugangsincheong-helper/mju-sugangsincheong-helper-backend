@@ -3,6 +3,7 @@ package kr.mmv.mjusugangsincheonghelper.system.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import kr.mmv.mjusugangsincheonghelper.global.annotation.OperationErrorCodes;
 import kr.mmv.mjusugangsincheonghelper.global.api.envelope.SingleSuccessResponseEnvelope;
 import kr.mmv.mjusugangsincheonghelper.system.dto.SystemStatusDto;
 import kr.mmv.mjusugangsincheonghelper.system.service.SystemService;
@@ -36,6 +37,9 @@ public class SystemController {
                     @ApiResponse(responseCode = "200", description = "조회 성공")
             }
     )
+    @OperationErrorCodes({
+            // 현재 정의된 에러 코드 없음
+    })
     public ResponseEntity<SingleSuccessResponseEnvelope<SystemStatusDto>> getSystemStatus() {
         SystemStatusDto status = systemService.getSystemStatus();
         return ResponseEntity.ok(SingleSuccessResponseEnvelope.of(status));

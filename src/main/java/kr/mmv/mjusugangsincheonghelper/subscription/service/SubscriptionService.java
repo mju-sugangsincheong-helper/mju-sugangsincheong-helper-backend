@@ -31,7 +31,7 @@ public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final SectionRepository sectionRepository;
-    private final StudentRepository userRepository;
+    private final StudentRepository studentRepository;
 
     private static final int MAX_SUBSCRIPTIONS = 50;
 
@@ -40,7 +40,7 @@ public class SubscriptionService {
      */
     @Transactional
     public SubscriptionResponseDto subscribe(String studentId, SubscriptionRequestDto request) {
-        Student user = userRepository.findById(studentId)
+        Student user = studentRepository.findById(studentId)
                 .orElseThrow(() -> new BaseException(ErrorCode.AUTH_USER_NOT_FOUND));
 
         Section section = sectionRepository.findById(request.getSectioncls())
@@ -63,7 +63,7 @@ public class SubscriptionService {
                 .build();
 
         Subscription saved = subscriptionRepository.save(subscription);
-        log.info("User {} subscribed to section {} ({})", studentId, section.getCurinm(), section.getSectioncls());
+        log.info("Student {} subscribed to section {} ({})", studentId, section.getCurinm(), section.getSectioncls());
 
         return SubscriptionResponseDto.from(saved);
     }
@@ -73,7 +73,7 @@ public class SubscriptionService {
      */
     @Transactional
     public void unsubscribe(String studentId, String sectioncls) {
-        Student user = userRepository.findById(studentId)
+        Student user = studentRepository.findById(studentId)
                 .orElseThrow(() -> new BaseException(ErrorCode.AUTH_USER_NOT_FOUND));
 
         Section section = sectionRepository.findById(sectioncls)
@@ -83,7 +83,7 @@ public class SubscriptionService {
                 .orElseThrow(() -> new BaseException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
         subscriptionRepository.delete(subscription);
-        log.info("User {} unsubscribed from section {} ({})", studentId, section.getCurinm(), section.getSectioncls());
+        log.info("Student {} unsubscribed from section {} ({})", studentId, section.getCurinm(), section.getSectioncls());
     }
 
     /**

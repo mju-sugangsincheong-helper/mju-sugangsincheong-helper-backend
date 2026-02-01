@@ -1,9 +1,10 @@
 package kr.mmv.mjusugangsincheonghelper.auth.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import kr.mmv.mjusugangsincheonghelper.global.api.code.ErrorCode;
 import kr.mmv.mjusugangsincheonghelper.global.api.exception.BaseException;
 import lombok.*;
@@ -11,17 +12,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * 명지대 인증 API 연동 서비스
- * 외부 의존성을 완전히 캡슐화하여 더이상 복잡해 지지 않도록 여기서 dto 까지 완전히 응집화 함
- * 
- * API 문서: https://mju-univ-auth.shinnk.mmv.kr/openapi.json
  */
 @Slf4j
 @Service
@@ -29,153 +29,180 @@ import java.util.Map;
 public class MjuUnivAuthService {
 
     private final ObjectMapper objectMapper;
-    
+    private final RestTemplate restTemplate = new RestTemplate();
+
     @Value("${mju.auth.base-url}")
     private String baseUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private static final String PATH_BASIC_INFO = "/api/v1/student-basicinfo";
+    private static final String PATH_STUDENT_CARD = "/api/v1/student-card";
 
-    // ================================
-    // Public Methods
-    // ================================
+    public AuthenticatedStudent authenticate(String studentId, String password) {
+        validateInput(studentId);
+
+        // 1. 기초 정보 조회
+        MjuApiResponse<StudentBasicInfo> basicRes = exchange(PATH_BASIC_INFO, studentId, password, new TypeReference<>() {});
+        validateUndergraduate(basicRes.getData());
+
+        // 2. 학생증 정보 조회
+        MjuApiResponse<StudentCard> cardRes = exchange(PATH_STUDENT_CARD, studentId, password, new TypeReference<>() {});
+
+        return mapToAuthenticatedStudent(studentId, basicRes.getData(), cardRes.getData());
+    }
 
     /**
-     * 명지대 인증 및 학생 정보 조회
-     * basic-info와 student-card를 호출하여 필요한 정보만 추출
-     * 
-     * @param studentId 학번
-     * @param password 비밀번호
-     * @return 인증된 학생 정보
-     * @throws BaseException 인증 실패 또는 학부생 아닌 경우
+     * 외부 API 통신 메서드
      */
-    public AuthenticatedStudent authenticate(String studentId, String password) {
-        // 1. 학번 형식 검증 (60으로 시작)
-        validateStudentId(studentId);
+    private <T> MjuApiResponse<T> exchange(String path, String studentId, String password, TypeReference<MjuApiResponse<T>> typeRef) {
+        String url = baseUrl + path;
+        
+        try {
+            HttpEntity<Map<String, Object>> entity = createEntity(studentId, password);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+            
+            return parseSuccess(response.getBody(), typeRef);
 
-        // 2. basic-info API 호출 (학부생 검증용)
-        MjuApiResponse<StudentBasicInfo> basicInfoResponse = callBasicInfoApi(studentId, password);
-        validateResponse(basicInfoResponse, studentId);
+        } catch (HttpStatusCodeException e) {
+            // 4xx, 5xx 에러 발생 시: JsonNode로 직접 파싱하여 에러 코드 추출
+            String responseBody = new String(e.getResponseBodyAsByteArray(), StandardCharsets.UTF_8);
+            log.warn("[MJU-Auth] HTTP Error {}: {}", e.getStatusCode(), responseBody);
+            
+            String errorCode = extractErrorCode(responseBody);
 
-        // 3. 학부생 검증 (카테고리가 "대학"이어야 함)
-        StudentBasicInfo basicInfo = basicInfoResponse.getData();
-        validateUndergraduate(basicInfo);
+            // 401 Unauthorized인 경우 에러 코드가 없어도 인증 실패로 간주
+            if (errorCode == null && e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                errorCode = "INVALID_CREDENTIALS_ERROR";
+            }
+            
+            if (errorCode != null) {
+                String errorMessage = extractErrorMessage(responseBody);
+                throw convertToDomainException(errorCode, errorMessage);
+            }
 
-        // 4. student-card API 호출 (상세 정보)
-        MjuApiResponse<StudentCard> cardResponse = callStudentCardApi(studentId, password);
-        validateResponse(cardResponse, studentId);
-
-        // 5. 필요한 정보만 추출하여 반환
-        return extractAuthenticatedStudent(studentId, basicInfo, cardResponse.getData());
-    }
-
-    // ================================
-    // Private Methods
-    // ================================
-
-    private void validateResponse(MjuApiResponse<?> response, String studentId) {
-        if (response.isAuthSuccess()) {
-            return;
-        }
-
-        String errorCode = response.getErrorCode();
-        String errorMessage = response.getErrorMessage();
-
-        log.warn("MJU Auth API error for student: {}. Code: {}, Message: {}", studentId, errorCode, errorMessage);
-
-        if ("INVALID_CREDENTIALS_ERROR".equals(errorCode)) {
-            throw new BaseException(ErrorCode.MJU_UNIV_AUTH_INVALID_CREDENTIALS);
-        }
-
-        if ("NETWORK_ERROR".equals(errorCode)) {
+            throw new BaseException(ErrorCode.MJU_UNIV_AUTH_SERVICE_UNAVAILABLE);
+            
+        } catch (RestClientException e) {
+            log.error("[MJU-Auth] Network Connection Error: {}", e.getMessage());
             throw new BaseException(ErrorCode.MJU_UNIV_AUTH_NETWORK_ERROR);
         }
-
-        if ("ALREADY_LOGGED_IN_ERROR".equals(errorCode) || 
-            "SESSION_EXPIRED_ERROR".equals(errorCode) || 
-            "SERVICE_NOT_FOUND_ERROR".equals(errorCode)) {
-            // 일시적인 서비스 장애로 간주
-            throw new BaseException(ErrorCode.MJU_UNIV_AUTH_SERVICE_UNAVAILABLE);
-        }
-
-        // 그 외 알 수 없는 오류
-        throw new BaseException(ErrorCode.MJU_UNIV_AUTH_UNKNOWN_ERROR);
     }
 
-    private void validateStudentId(String studentId) {
+    private String extractErrorCode(String jsonBody) {
+        try {
+            JsonNode root = objectMapper.readTree(jsonBody);
+            if (root.has("error_code") && !root.get("error_code").isNull()) {
+                return root.get("error_code").asText();
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String extractErrorMessage(String jsonBody) {
+        try {
+            JsonNode root = objectMapper.readTree(jsonBody);
+            if (root.has("error_message") && !root.get("error_message").isNull()) {
+                return root.get("error_message").asText();
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private BaseException convertToDomainException(String code, String message) {
+        log.info("[MJU-Auth] Business Error Found: {} ({})", code, message);
+
+        switch (code) {
+            case "INVALID_CREDENTIALS_ERROR":
+                return new BaseException(ErrorCode.MJU_UNIV_AUTH_INVALID_CREDENTIALS);
+                
+            case "NETWORK_ERROR":
+            case "SERVICE_UNKNOWN_ERROR":
+                return new BaseException(ErrorCode.MJU_UNIV_AUTH_NETWORK_ERROR);
+                
+            case "ALREADY_LOGGED_IN_ERROR":
+            case "SESSION_EXPIRED_ERROR":
+            case "SERVICE_NOT_FOUND_ERROR":
+            case "INVALID_SERVICE_USAGE_ERROR":
+                return new BaseException(ErrorCode.MJU_UNIV_AUTH_SERVICE_UNAVAILABLE);
+                
+            case "PARSING_ERROR":
+            case "UNKNOWN_ERROR":
+            default:
+                return new BaseException(ErrorCode.MJU_UNIV_AUTH_UNKNOWN_ERROR);
+        }
+    }
+
+    // ================================
+    // Helper Methods
+    // ================================
+
+    private <T> MjuApiResponse<T> parseSuccess(String body, TypeReference<MjuApiResponse<T>> typeRef) {
+        try {
+            MjuApiResponse<T> res = objectMapper.readValue(body, typeRef);
+            // 200 OK를 받았는데 논리적 에러 코드가 있는 경우 체크
+            if (res != null && res.getErrorCode() != null) {
+                throw convertToDomainException(res.getErrorCode(), res.getErrorMessage());
+            }
+            return res;
+        } catch (BaseException be) {
+            throw be;
+        } catch (Exception e) {
+            log.error("[MJU-Auth] JSON Parse Error (Success Path): {}", e.getMessage());
+            throw new BaseException(ErrorCode.MJU_UNIV_AUTH_PARSE_ERROR);
+        }
+    }
+
+    private MjuErrorResponse parseError(String body) {
+        try {
+            // data 필드 등 복잡한 구조 무시하고 에러 코드만 추출
+            return objectMapper.readValue(body, MjuErrorResponse.class);
+        } catch (Exception e) {
+            log.error("[MJU-Auth] Failed to parse error response body: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private void validateInput(String studentId) {
         if (studentId == null || !studentId.startsWith("60")) {
             throw new BaseException(ErrorCode.MJU_UNIV_AUTH_INVALID_STUDENT_ID);
         }
     }
 
-    private void validateUndergraduate(StudentBasicInfo basicInfo) {
-        String category = basicInfo.getCategory();
-        if (category == null || !category.contains("대학")) {
-            log.warn("Non-undergraduate student attempted login. Category: {}", category);
+    private void validateUndergraduate(StudentBasicInfo data) {
+        if (data == null || data.getCategory() == null || !data.getCategory().contains("대학")) {
             throw new BaseException(ErrorCode.MJU_UNIV_AUTH_NOT_UNDERGRADUATE);
         }
     }
 
-    private MjuApiResponse<StudentBasicInfo> callBasicInfoApi(String studentId, String password) {
-        String url = baseUrl + "/api/v1/student-basicinfo";
-        return callApi(url, studentId, password, new TypeReference<MjuApiResponse<StudentBasicInfo>>() {});
+    private HttpEntity<Map<String, Object>> createEntity(String id, String pw) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        Map<String, Object> body = new HashMap<>();
+        body.put("user_id", id);
+        body.put("user_pw", pw);
+        return new HttpEntity<>(body, headers);
     }
 
-    private MjuApiResponse<StudentCard> callStudentCardApi(String studentId, String password) {
-        String url = baseUrl + "/api/v1/student-card";
-        return callApi(url, studentId, password, new TypeReference<MjuApiResponse<StudentCard>>() {});
-    }
-
-    private <T> T callApi(String url, String studentId, String password, TypeReference<T> typeReference) {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Accept", MediaType.APPLICATION_JSON_VALUE);
-
-            Map<String, String> body = new HashMap<>();
-            body.put("user_id", studentId);
-            body.put("user_pw", password);
-
-            HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
-
-            log.debug("Calling MJU Auth API: {}", url);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-
-            return objectMapper.readValue(response.getBody(), typeReference);
-
-        } catch (RestClientException e) {
-            log.error("MJU Auth API call failed: {}", e.getMessage());
-            throw new BaseException(ErrorCode.MJU_UNIV_AUTH_NETWORK_ERROR);
-        } catch (Exception e) {
-            log.error("Failed to parse MJU Auth API response: {}", e.getMessage());
-            throw new BaseException(ErrorCode.MJU_UNIV_AUTH_PARSE_ERROR);
-        }
-    }
-
-    private AuthenticatedStudent extractAuthenticatedStudent(String studentId, StudentBasicInfo basicInfo, StudentCard cardInfo) {
-        StudentCard.StudentProfile profile = cardInfo.getStudentProfile();
-        
+    private AuthenticatedStudent mapToAuthenticatedStudent(String id, StudentBasicInfo basic, StudentCard card) {
+        StudentCard.StudentProfile profile = card.getStudentProfile();
         return AuthenticatedStudent.builder()
-                .studentId(studentId)
+                .studentId(id)
                 .name(profile != null ? profile.getNameKorean() : "Unknown")
-                .grade(basicInfo.getGrade())
-                .email(cardInfo.getPersonalContact() != null ? cardInfo.getPersonalContact().getEmail() : null)
-                .department(basicInfo.getDepartment())
+                .grade(basic.getGrade())
+                .email(card.getPersonalContact() != null ? card.getPersonalContact().getEmail() : null)
+                .department(basic.getDepartment())
                 .enrollmentStatus(profile != null ? profile.getEnrollmentStatus() : null)
                 .build();
     }
 
     // ================================
-    // Inner DTOs (외부 API 응답용)
+    // DTOs
     // ================================
 
-    /**
-     * 인증된 학생 정보 (내부에서 사용할 DTO)
-     * Student 엔티티 생성에 필요한 정보만 포함
-     */
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class AuthenticatedStudent {
         private String studentId;
         private String name;
@@ -185,142 +212,45 @@ public class MjuUnivAuthService {
         private String enrollmentStatus;
     }
 
-    /**
-     * 명지대 인증 API 공통 응답 래퍼
-     */
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    // 성공 응답용 (제네릭)
+    @Data @NoArgsConstructor @JsonIgnoreProperties(ignoreUnknown = true)
     private static class MjuApiResponse<T> {
-
-        @JsonProperty("request_succeeded")
-        private Boolean requestSucceeded;
-
-        @JsonProperty("credentials_valid")
-        private Boolean credentialsValid;
-
+        @JsonProperty("request_succeeded") private boolean requestSucceeded;
+        @JsonProperty("credentials_valid") private boolean credentialsValid;
+        @JsonProperty("error_code") private String errorCode; // 200 OK여도 있을 수 있음
+        @JsonProperty("error_message") private String errorMessage;
+        private boolean success;
         private T data;
-
-        @JsonProperty("error_code")
-        private String errorCode;
-
-        @JsonProperty("error_message")
-        private String errorMessage;
-
-        private Boolean success;
-
-        public boolean isAuthSuccess() {
-            return Boolean.TRUE.equals(requestSucceeded) 
-                    && Boolean.TRUE.equals(credentialsValid) 
-                    && Boolean.TRUE.equals(success);
-        }
     }
 
-    /**
-     * student-basicinfo API 응답 데이터
-     */
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    // 실패 응답용 (단순형) - 제네릭 T 타입 문제 회피
+    @Data @NoArgsConstructor @JsonIgnoreProperties(ignoreUnknown = true)
+    private static class MjuErrorResponse {
+        @JsonProperty("error_code") private String errorCode;
+        @JsonProperty("error_message") private String errorMessage;
+    }
+
+    @Data @NoArgsConstructor @JsonIgnoreProperties(ignoreUnknown = true)
     private static class StudentBasicInfo {
         private String department;
         private String category;
         private String grade;
-        
-        @JsonProperty("last_access_time")
-        private String lastAccessTime;
-        
-        @JsonProperty("last_access_ip")
-        private String lastAccessIp;
-        
-        @JsonProperty("raw_html_data")
-        private String rawHtmlData;
     }
 
-    /**
-     * student-card API 응답 데이터
-     */
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @NoArgsConstructor @JsonIgnoreProperties(ignoreUnknown = true)
     private static class StudentCard {
+        @JsonProperty("student_profile") private StudentProfile studentProfile;
+        @JsonProperty("personal_contact") private PersonalContact personalContact;
 
-        @JsonProperty("student_profile")
-        private StudentProfile studentProfile;
-
-        @JsonProperty("personal_contact")
-        private PersonalContact personalContact;
-
-        @JsonProperty("raw_html_data")
-        private String rawHtmlData;
-
-        @Getter
-        @Builder
-        @NoArgsConstructor
-        @AllArgsConstructor
+        @Data @NoArgsConstructor @JsonIgnoreProperties(ignoreUnknown = true)
         public static class StudentProfile {
-            @JsonProperty("student_id")
-            private String studentId;
-
-            @JsonProperty("name_korean")
-            private String nameKorean;
-
-            private String grade;
-
-            @JsonProperty("enrollment_status")
-            private String enrollmentStatus;
-
-            @JsonProperty("college_department")
-            private String collegeDepartment;
-
-            @JsonProperty("academic_advisor")
-            private String academicAdvisor;
-
-            @JsonProperty("student_designed_major_advisor")
-            private String studentDesignedMajorAdvisor;
-
-            @JsonProperty("photo_base64")
-            private String photoBase64;
+            @JsonProperty("name_korean") private String nameKorean;
+            @JsonProperty("enrollment_status") private String enrollmentStatus;
         }
 
-        @Getter
-        @Builder
-        @NoArgsConstructor
-        @AllArgsConstructor
+        @Data @NoArgsConstructor @JsonIgnoreProperties(ignoreUnknown = true)
         public static class PersonalContact {
-            @JsonProperty("english_surname")
-            private String englishSurname;
-
-            @JsonProperty("english_givenname")
-            private String englishGivenname;
-
-            @JsonProperty("phone_number")
-            private String phoneNumber;
-
-            @JsonProperty("mobile_number")
-            private String mobileNumber;
-
             private String email;
-
-            @JsonProperty("current_residence_address")
-            private Address currentResidenceAddress;
-
-            @JsonProperty("resident_registration_address")
-            private Address residentRegistrationAddress;
-        }
-
-        @Getter
-        @Builder
-        @NoArgsConstructor
-        @AllArgsConstructor
-        public static class Address {
-            @JsonProperty("postal_code")
-            private String postalCode;
-
-            private String address;
         }
     }
 }
