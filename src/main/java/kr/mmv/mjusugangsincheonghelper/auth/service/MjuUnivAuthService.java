@@ -19,7 +19,7 @@ import java.util.Map;
 
 /**
  * 명지대 인증 API 연동 서비스
- * 외부 의존성을 완전히 캡슐화하여 auth 패키지 내부에서만 사용
+ * 외부 의존성을 완전히 캡슐화하여 더이상 복잡해 지지 않도록 여기서 dto 까지 완전히 응집화 함
  * 
  * API 문서: https://mju-univ-auth.shinnk.mmv.kr/openapi.json
  */
@@ -54,12 +54,7 @@ public class MjuUnivAuthService {
 
         // 2. basic-info API 호출 (학부생 검증용)
         MjuApiResponse<StudentBasicInfo> basicInfoResponse = callBasicInfoApi(studentId, password);
-        
-        if (!basicInfoResponse.isAuthSuccess()) {
-            log.warn("MJU Auth failed for student: {}, error: {}", 
-                    studentId, basicInfoResponse.getErrorMessage());
-            throw new BaseException(ErrorCode.MJU_UNIV_AUTH_INVALID_CREDENTIALS);
-        }
+        validateResponse(basicInfoResponse, studentId);
 
         // 3. 학부생 검증 (카테고리가 "대학"이어야 함)
         StudentBasicInfo basicInfo = basicInfoResponse.getData();
@@ -67,11 +62,7 @@ public class MjuUnivAuthService {
 
         // 4. student-card API 호출 (상세 정보)
         MjuApiResponse<StudentCard> cardResponse = callStudentCardApi(studentId, password);
-        
-        if (!cardResponse.isAuthSuccess()) {
-            log.warn("MJU Student Card API failed for student: {}", studentId);
-            throw new BaseException(ErrorCode.MJU_UNIV_AUTH_NETWORK_ERROR);
-        }
+        validateResponse(cardResponse, studentId);
 
         // 5. 필요한 정보만 추출하여 반환
         return extractAuthenticatedStudent(studentId, basicInfo, cardResponse.getData());
@@ -80,6 +71,35 @@ public class MjuUnivAuthService {
     // ================================
     // Private Methods
     // ================================
+
+    private void validateResponse(MjuApiResponse<?> response, String studentId) {
+        if (response.isAuthSuccess()) {
+            return;
+        }
+
+        String errorCode = response.getErrorCode();
+        String errorMessage = response.getErrorMessage();
+
+        log.warn("MJU Auth API error for student: {}. Code: {}, Message: {}", studentId, errorCode, errorMessage);
+
+        if ("INVALID_CREDENTIALS_ERROR".equals(errorCode)) {
+            throw new BaseException(ErrorCode.MJU_UNIV_AUTH_INVALID_CREDENTIALS);
+        }
+
+        if ("NETWORK_ERROR".equals(errorCode)) {
+            throw new BaseException(ErrorCode.MJU_UNIV_AUTH_NETWORK_ERROR);
+        }
+
+        if ("ALREADY_LOGGED_IN_ERROR".equals(errorCode) || 
+            "SESSION_EXPIRED_ERROR".equals(errorCode) || 
+            "SERVICE_NOT_FOUND_ERROR".equals(errorCode)) {
+            // 일시적인 서비스 장애로 간주
+            throw new BaseException(ErrorCode.MJU_UNIV_AUTH_SERVICE_UNAVAILABLE);
+        }
+
+        // 그 외 알 수 없는 오류
+        throw new BaseException(ErrorCode.MJU_UNIV_AUTH_UNKNOWN_ERROR);
+    }
 
     private void validateStudentId(String studentId) {
         if (studentId == null || !studentId.startsWith("60")) {
