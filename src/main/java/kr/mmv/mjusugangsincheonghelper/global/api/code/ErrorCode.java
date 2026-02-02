@@ -58,6 +58,9 @@ public enum ErrorCode {
     DEVICE_NOT_FOUND(HttpStatus.NOT_FOUND, "DEVICE_001", "디바이스 정보를 찾을 수 없습니다"),
     DEVICE_ALREADY_EXISTS(HttpStatus.CONFLICT, "DEVICE_002", "이미 등록된 디바이스입니다"),
 
+    // ===== Practice (연습) =====
+    PRACTICE_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "PRACTICE_001", "연습 기록을 찾을 수 없습니다"),
+
     // ===== System =====
     SYSTEM_CRAWLER_DOWN(HttpStatus.SERVICE_UNAVAILABLE, "SYS_001", "데이터 수집 서비스가 일시적으로 중단되었습니다"),
     SYSTEM_REDIS_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "SYS_002", "캐시 서비스 연결에 실패했습니다");
