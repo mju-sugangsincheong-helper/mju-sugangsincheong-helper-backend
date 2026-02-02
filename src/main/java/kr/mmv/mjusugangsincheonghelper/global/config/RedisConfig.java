@@ -57,12 +57,19 @@ public class RedisConfig {
     }
     
     /**
-     * ObjectMapper 설정 (Date 직렬화 문제 해결)
+     * ObjectMapper 설정 (Date 직렬화 문제 해결 + 타입 정보 포함)
      */
     private ObjectMapper objectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        // 캐싱 시 타입 정보를 포함하도록 설정 (LinkedHashMap 캐스팅 오류 방지)
+        objectMapper.activateDefaultTyping(
+                com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator.builder()
+                        .allowIfBaseType(Object.class)
+                        .build(),
+                ObjectMapper.DefaultTyping.NON_FINAL
+        );
         return objectMapper;
     }
 
