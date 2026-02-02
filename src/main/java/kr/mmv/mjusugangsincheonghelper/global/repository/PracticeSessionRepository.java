@@ -44,4 +44,43 @@ public interface PracticeSessionRepository extends JpaRepository<PracticeSession
             "WHERE p2.user = p.user AND p2.countNum = :countNum) " +
             "ORDER BY p.timeMs")
     List<PracticeSession> findRankingByCountNum(@Param("countNum") Integer countNum);
+
+    // ==========================================
+    //  Personal Rank Calculation (Count Queries)
+    // ==========================================
+
+    /**
+     * 전체 랭킹: 나보다 기록이 좋은 사람 수
+     */
+    @Query(value = "SELECT COUNT(*) FROM (" +
+            "SELECT student_id FROM practice_sessions " +
+            "WHERE count_num = :countNum " +
+            "GROUP BY student_id " +
+            "HAVING MIN(time_ms) < :myTime " +
+            ") as better_ranks", nativeQuery = true)
+    long countHigherRank(@Param("countNum") Integer countNum, @Param("myTime") Long myTime);
+
+    /**
+     * 학과 랭킹: 같은 학과 내에서 나보다 기록이 좋은 사람 수
+     */
+    @Query(value = "SELECT COUNT(*) FROM (" +
+            "SELECT p.student_id FROM practice_sessions p " +
+            "JOIN students s ON p.student_id = s.student_id " +
+            "WHERE p.count_num = :countNum AND s.department = :dept " +
+            "GROUP BY p.student_id " +
+            "HAVING MIN(p.time_ms) < :myTime " +
+            ") as better_ranks", nativeQuery = true)
+    long countHigherRankByDept(@Param("countNum") Integer countNum, @Param("myTime") Long myTime, @Param("dept") String dept);
+
+    /**
+     * 학년 랭킹: 같은 학년 내에서 나보다 기록이 좋은 사람 수
+     */
+    @Query(value = "SELECT COUNT(*) FROM (" +
+            "SELECT p.student_id FROM practice_sessions p " +
+            "JOIN students s ON p.student_id = s.student_id " +
+            "WHERE p.count_num = :countNum AND s.grade = :grade " +
+            "GROUP BY p.student_id " +
+            "HAVING MIN(p.time_ms) < :myTime " +
+            ") as better_ranks", nativeQuery = true)
+    long countHigherRankByGrade(@Param("countNum") Integer countNum, @Param("myTime") Long myTime, @Param("grade") String grade);
 }
