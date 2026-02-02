@@ -36,4 +36,5 @@ test 프로파일에서 진행되며 test 모듈 실행시에 test 프로파일�
 ### 고민할 지점
 1. database 쿼리 최적화를 위해 view 접근 vs index 접근 무었을 주 전략으로 해야 하는가
 2. database, redis 와는 몇개의 연결을 유지하는것이 좋을까?
-3. 
+3. MDC 를 통한 로깅 전략
+4. 심각한 에러에 대한 slack 알림
