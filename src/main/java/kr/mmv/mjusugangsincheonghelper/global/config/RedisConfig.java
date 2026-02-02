@@ -21,8 +21,50 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * 각 도메인별 Pub/Sub 설정은 해당 도메인 패키지에서 관리
  */
 @Configuration
+@org.springframework.cache.annotation.EnableCaching
 @RequiredArgsConstructor
 public class RedisConfig {
+
+    /**
+     * CacheManager 설정
+     * - ranking: 30초
+     * - stats: 19초
+     * - default: 60초
+     */
+    @Bean
+    public org.springframework.cache.CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+        // 1. 기본 설정 (Default): TTL 60초
+        org.springframework.data.redis.cache.RedisCacheConfiguration defaultConfig = 
+                org.springframework.data.redis.cache.RedisCacheConfiguration.defaultCacheConfig()
+                .disableCachingNullValues()
+                .entryTtl(java.time.Duration.ofSeconds(60))
+                .serializeKeysWith(org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
+                .serializeValuesWith(org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer(objectMapper())));
+
+        // 2. 캐시 이름별 커스텀 TTL 설정
+        java.util.Map<String, org.springframework.data.redis.cache.RedisCacheConfiguration> ttlConfigs = new java.util.HashMap<>();
+        
+        // [A] 구독 통계 ("stats"): 19초
+        ttlConfigs.put("stats", defaultConfig.entryTtl(java.time.Duration.ofSeconds(19)));
+
+        // [B] 수강신청 연습 랭킹 ("ranking"): 30초
+        ttlConfigs.put("ranking", defaultConfig.entryTtl(java.time.Duration.ofSeconds(30)));
+
+        return org.springframework.data.redis.cache.RedisCacheManager.builder(connectionFactory)
+                .cacheDefaults(defaultConfig)
+                .withInitialCacheConfigurations(ttlConfigs)
+                .build();
+    }
+    
+    /**
+     * ObjectMapper 설정 (Date 직렬화 문제 해결)
+     */
+    private ObjectMapper objectMapper() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        return objectMapper;
+    }
 
     /**
      * 문자열 기반 Redis Template
@@ -46,12 +88,8 @@ public class RedisConfig {
         template.setHashKeySerializer(new StringRedisSerializer());
         
         // Value는 JSON
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        
         GenericJackson2JsonRedisSerializer jsonSerializer = 
-                new GenericJackson2JsonRedisSerializer(objectMapper);
+                new GenericJackson2JsonRedisSerializer(objectMapper());
         template.setValueSerializer(jsonSerializer);
         template.setHashValueSerializer(jsonSerializer);
         
