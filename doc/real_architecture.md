@@ -599,7 +599,7 @@ public class RedisConfig {
 *   **동작 방식:**
     1.  **일정 로딩:** 시작 시 `https://mju-sugangsinchenong-schedule.shinnk.c01.kr/schedule.json`을 요청하여 일정 로드.
     2.  **크롤링:** 일정 시간에 맞춰 학교 서버 크롤링.
-    3.  **생존 신고:** 작업 성공 시 Redis에 `mju:system:status` 키를 `SET` (TTL 60초).
+    3.  **생존 신고:** 작업 성공 시 Redis에 `mju:system:status` 키를 `SET ... EX 60` (TTL 60초).
 *   **단순화:**
     *   스스로 판단하지 않음. 배포된 프론트엔드의 설정 파일을 따름.
 
@@ -915,7 +915,7 @@ erDiagram
 ### 관리자 계정 및 기능
 
 - 기능 1: 시스템 강제 초기화 (Disaster Recovery)
-- 기능 2: 크롤러 헬스 체크 (Monitoring) `SET mju:crawler:heartbeat {timestamp}`
+- 기능 2: 크롤러 헬스 체크 (Monitoring) `SET mju:system:status {timestamp} EX 60`
 
 ### 추가
 1. main spring 서버와 notification 서버는 논리적으로는 2개로 분리되어 있지만 물리적으로 1개로 유지 향후 서비스가 커지면 2개로 분리할 생각이 있음

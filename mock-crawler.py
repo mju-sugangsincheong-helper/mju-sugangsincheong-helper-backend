@@ -142,7 +142,7 @@ def main():
         snapshot = json.dumps(lectures, ensure_ascii=False, separators=(',', ':'))
         redis.set("mju:section:curr", snapshot)
         redis.publish("mju:section:change", "updated")
-        redis.setex("mju:system:status", 60, str(int(time.time())))
+        redis.set("mju:system:status", str(int(time.time())), ex=60)
         
         # 로깅
         icon = "🟢" if released > 0 else "⚪"
