@@ -46,14 +46,14 @@ public class SystemService {
                 lastUpdatedAt = LocalDateTime.ofInstant(
                         Instant.ofEpochSecond(timestampSeconds), ZoneId.systemDefault());
                 
-                // SETEX 60으로 설정되므로, 키가 존재한다는 것은 
+                // SET ... EX 60으로 설정되므로, 키가 존재한다는 것은 
                 // 최근 60초 이내에 크롤러가 생존신고를 했다는 의미임.
                 // 추가적인 시간 비교 없이 존재 여부만으로 판단 가능하나,
                 // 안전을 위해 현재 시간과 비교 로직도 유지 (옵션)
                 long nowSeconds = System.currentTimeMillis() / 1000;
                 
                 // 타임스탬프가 미래인 경우도 고려 (클럭 오차 등)하거나
-                // 단순히 키가 있으면 Running으로 간주하는 것이 SETEX 모델에 적합
+                // 단순히 키가 있으면 Running으로 간주하는 것이 SET ... EX 모델에 적합
                 running = true; 
                 
                 // 만약 만료시간 직전이라도 키가 있으면 유효함.
