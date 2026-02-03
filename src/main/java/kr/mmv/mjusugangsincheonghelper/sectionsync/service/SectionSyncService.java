@@ -4,11 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import kr.mmv.mjusugangsincheonghelper.global.entity.Section;
-import kr.mmv.mjusugangsincheonghelper.global.entity.Subscription;
 import kr.mmv.mjusugangsincheonghelper.global.repository.SectionRepository;
-import kr.mmv.mjusugangsincheonghelper.global.repository.StudentDeviceRepository;
-import kr.mmv.mjusugangsincheonghelper.global.repository.SubscriptionRepository;
-import kr.mmv.mjusugangsincheonghelper.notification.dto.NotificationMessageDto;
+import kr.mmv.mjusugangsincheonghelper.notification.service.NotificationService;
 import kr.mmv.mjusugangsincheonghelper.sectionsync.dto.SectionSyncDataDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,15 +33,12 @@ import java.util.stream.Collectors;
 public class SectionSyncService {
 
     private final SectionRepository sectionRepository;
-    private final SubscriptionRepository subscriptionRepository;
-    private final StudentDeviceRepository studentDeviceRepository;
+    private final NotificationService notificationService;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
 
     private static final String REDIS_KEY_CURR = "mju:section:curr";
     private static final String REDIS_KEY_PREV = "mju:section:prev";
-    private static final String NOTIFICATION_QUEUE = "mju:section:notification:queue";
-    private static final int BATCH_SIZE = 400;
 
     /**
      * 강의 동기화 메인 로직
@@ -113,7 +107,7 @@ public class SectionSyncService {
         
         List<Section> toInsert = new ArrayList<>();
         List<Section> toUpdate = new ArrayList<>();
-        List<String> vacancyOccurredSectionIds = new ArrayList<>();
+        List<Section> vacancyOccurredSections = new ArrayList<>(); // String ID -> Section Entity
         
         // 현재 데이터 처리
         for (SectionSyncDataDto curr : currSections) {
@@ -141,7 +135,7 @@ public class SectionSyncService {
                     // 만석 → 여석 변경 감지
                     if (wasFull && !Boolean.TRUE.equals(existing.getIsFull())) {
                         log.info("Vacancy occurred: {} - {}", existing.getCurinm(), existing.getSectioncls());
-                        vacancyOccurredSectionIds.add(existing.getSectioncls());
+                        vacancyOccurredSections.add(existing);
                     }
                 } else {
                     // DB에는 없지만 prev에 있던 경우 (신규 추가)
@@ -173,9 +167,9 @@ public class SectionSyncService {
             log.info("Updated {} sections", toUpdate.size());
         }
         
-        // 여석 알림 발송
-        if (!vacancyOccurredSectionIds.isEmpty()) {
-            sendVacancyNotifications(vacancyOccurredSectionIds);
+        // 여석 알림 발송 (NotificationService 위임)
+        if (!vacancyOccurredSections.isEmpty()) {
+            notificationService.sendVacancyNotification(vacancyOccurredSections);
         }
     }
 
@@ -210,82 +204,6 @@ public class SectionSyncService {
         
         sectionRepository.saveAll(toSave);
         log.info("Bulk processed {} sections", toSave.size());
-    }
-
-    /**
-     * 여석 알림 발송 (Redis Queue Push)
-     */
-    private void sendVacancyNotifications(List<String> sectionIds) {
-        List<Subscription> subscriptions = subscriptionRepository.findSubscribersForSectionIds(sectionIds);
-        
-        if (subscriptions.isEmpty()) {
-            log.info("No subscribers for vacancy notifications");
-            return;
-        }
-        
-        log.info("Processing vacancy notifications for {} subscribers", subscriptions.size());
-
-        // 강의별로 그룹화
-        Map<Section, List<Subscription>> groupedBySections = subscriptions.stream()
-                .collect(Collectors.groupingBy(Subscription::getSection));
-
-        for (Map.Entry<Section, List<Subscription>> entry : groupedBySections.entrySet()) {
-            Section section = entry.getKey();
-            List<Subscription> sectionSubscriptions = entry.getValue();
-
-            // 구독자들의 학생 ID 수집
-            List<String> studentIds = sectionSubscriptions.stream()
-                    .map(s -> s.getUser().getStudentId())
-                    .collect(Collectors.toList());
-
-            // StudentDevice 테이블에서 FCM 토큰 조회
-            List<String> fcmTokens = studentDeviceRepository.findFcmTokensByStudentIds(studentIds);
-
-            // 이메일 수집
-            List<String> emails = sectionSubscriptions.stream()
-                    .map(s -> s.getUser().getEmail())
-                    .filter(email -> email != null && !email.isBlank())
-                    .collect(Collectors.toList());
-
-            // 배치로 나눠서 Queue에 전송
-            pushToNotificationQueue(section, fcmTokens, emails);
-        }
-    }
-
-    /**
-     * 배치 알림 전송 (Push to Redis)
-     */
-    private void pushToNotificationQueue(Section section, List<String> fcmTokens, List<String> emails) {
-        int vacancy = section.getAvailableSeats();
-
-        // FCM 토큰을 배치로 나눔
-        for (int i = 0; i < fcmTokens.size(); i += BATCH_SIZE) {
-            List<String> batchTokens = fcmTokens.subList(i, Math.min(i + BATCH_SIZE, fcmTokens.size()));
-            List<String> batchEmails = i < emails.size() 
-                    ? emails.subList(i, Math.min(i + BATCH_SIZE, emails.size()))
-                    : new ArrayList<>();
-
-            NotificationMessageDto message = NotificationMessageDto.builder()
-                    .sectioncls(section.getSectioncls())
-                    .curinm(section.getCurinm())
-                    .profnm(section.getProfnm())
-                    .deptcd(section.getDeptcd())
-                    .deptnm(section.getDeptnm())
-                    .vacancy(vacancy)
-                    .fcmTokens(batchTokens)
-                    .emails(batchEmails)
-                    .build();
-
-            try {
-                String json = objectMapper.writeValueAsString(message);
-                redisTemplate.opsForList().leftPush(NOTIFICATION_QUEUE, json);
-            } catch (Exception e) {
-                log.error("Failed to push notification to queue", e);
-            }
-        }
-
-        log.info("Queued vacancy notifications for section: {} ({} tokens, {} emails)", 
-                section.getCurinm(), fcmTokens.size(), emails.size());
     }
 
     /**

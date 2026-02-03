@@ -16,16 +16,16 @@ public interface PracticeSessionRepository extends JpaRepository<PracticeSession
     /**
      * 사용자의 연습 기록 조회
      */
-    List<PracticeSession> findByUserOrderByCreatedAtDesc(Student user);
+    List<PracticeSession> findByStudentOrderByCreatedAtDesc(Student student);
 
     /**
-     * 사용자의 장바구니 개수별 최고 기록 조회
+     * 학생의 과목 수 별 최고 기록 조회
+     * (각 count_num 별 가장 빠른 time_ms 기록 조회)
      */
-    @Query("SELECT p FROM PracticeSession p WHERE p.user.studentId = :studentId " +
-            "AND (p.countNum, p.timeMs) IN " +
-            "(SELECT p2.countNum, MIN(p2.timeMs) FROM PracticeSession p2 " +
-            "WHERE p2.user.studentId = :studentId GROUP BY p2.countNum)")
+    @Query("SELECT p FROM PracticeSession p WHERE p.student.studentId = :studentId AND (p.countNum, p.timeMs) IN " +
+           "(SELECT p2.countNum, MIN(p2.timeMs) FROM PracticeSession p2 WHERE p2.student.studentId = :studentId GROUP BY p2.countNum)")
     List<PracticeSession> findBestRecordsByStudent(@Param("studentId") String studentId);
+
 
     /**
      * 전체 랭킹 조회 (장바구니 개수별 상위 기록)
@@ -37,13 +37,14 @@ public interface PracticeSessionRepository extends JpaRepository<PracticeSession
     List<PracticeSession> findGlobalRanking();
 
     /**
-     * 특정 장바구니 개수의 랭킹 조회
+     * 특정 과목 수(count_num)에 대한 랭킹 조회
+     * (각 사용자별 최고 기록만 조회, time_ms 오름차순)
      */
-    @Query("SELECT p FROM PracticeSession p WHERE p.countNum = :countNum " +
-            "AND p.timeMs = (SELECT MIN(p2.timeMs) FROM PracticeSession p2 " +
-            "WHERE p2.user = p.user AND p2.countNum = :countNum) " +
-            "ORDER BY p.timeMs")
+    @Query("SELECT p FROM PracticeSession p WHERE p.countNum = :countNum AND p.timeMs = " +
+           "(SELECT MIN(p2.timeMs) FROM PracticeSession p2 WHERE p2.student = p.student AND p2.countNum = :countNum) " +
+           "ORDER BY p.timeMs")
     List<PracticeSession> findRankingByCountNum(@Param("countNum") Integer countNum);
+
 
     // ==========================================
     //  Personal Rank Calculation (Count Queries)
