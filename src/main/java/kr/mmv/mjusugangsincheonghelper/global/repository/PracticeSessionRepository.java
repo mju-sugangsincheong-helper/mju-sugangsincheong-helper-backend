@@ -14,6 +14,11 @@ import java.util.List;
 public interface PracticeSessionRepository extends JpaRepository<PracticeSession, Long> {
 
     /**
+     * 사용자의 연습 기록 삭제
+     */
+    void deleteByStudent(Student student);
+
+    /**
      * 사용자의 연습 기록 조회
      */
     List<PracticeSession> findByUserOrderByCreatedAtDesc(Student user);

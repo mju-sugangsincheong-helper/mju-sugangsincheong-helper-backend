@@ -99,9 +99,8 @@ public class AuthController {
             summary = "회원 탈퇴",
             description = """
                     회원 탈퇴를 수행합니다.
-                    - 사용자의 계정을 비활성화합니다. (is_active = false)
-                    - 사용자의 구독 목록 및 디바이스 정보를 모두 삭제합니다.
-                    - Refresh Token을 삭제합니다.
+                    - 사용자의 모든 정보(구독, 시간표, 연습기록, 기기정보)를 삭제합니다.
+                    - 사용자 계정 자체를 영구적으로 삭제합니다.
                     """,
             responses = {
                     @ApiResponse(responseCode = "200", description = "탈퇴 성공")

@@ -60,6 +60,8 @@ public enum ErrorCode {
 
     // ===== Practice (연습) =====
     PRACTICE_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "PRACTICE_001", "연습 기록을 찾을 수 없습니다"),
+    PRACTICE_TIME_TOO_SHORT(HttpStatus.BAD_REQUEST, "PRACTICE_002", "연습 시간이 너무 짧습니다 (매크로 의심)"),
+    PRACTICE_BASKET_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "PRACTICE_003", "장바구니에는 최대 10과목까지 담을 수 있습니다"),
 
     // ===== System =====
     SYSTEM_CRAWLER_DOWN(HttpStatus.SERVICE_UNAVAILABLE, "SYS_001", "데이터 수집 서비스가 일시적으로 중단되었습니다"),

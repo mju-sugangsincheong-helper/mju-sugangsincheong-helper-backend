@@ -11,8 +11,11 @@ import kr.mmv.mjusugangsincheonghelper.auth.security.JwtTokenProvider;
 import kr.mmv.mjusugangsincheonghelper.global.api.code.ErrorCode;
 import kr.mmv.mjusugangsincheonghelper.global.api.exception.BaseException;
 import kr.mmv.mjusugangsincheonghelper.global.entity.Student;
+import kr.mmv.mjusugangsincheonghelper.global.repository.PracticeSessionRepository;
+import kr.mmv.mjusugangsincheonghelper.global.repository.StudentDeviceRepository;
 import kr.mmv.mjusugangsincheonghelper.global.repository.StudentRepository;
 import kr.mmv.mjusugangsincheonghelper.global.repository.SubscriptionRepository;
+import kr.mmv.mjusugangsincheonghelper.global.repository.TimetableRepository;
 
 /**
  * 인증 서비스
@@ -28,6 +31,9 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final MjuUnivAuthService mjuUnivAuthService;
     private final SubscriptionRepository subscriptionRepository;
+    private final PracticeSessionRepository practiceSessionRepository;
+    private final TimetableRepository timetableRepository;
+    private final StudentDeviceRepository studentDeviceRepository;
 
     @Value("${jwt.expiration:1209600000}")
     private long expirationMs;  // 14일
@@ -131,20 +137,22 @@ public class AuthService {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new BaseException(ErrorCode.AUTH_USER_NOT_FOUND));
 
-        // 1. 계정 비활성화 & 2. 토큰 삭제
-        student.deactivate();
-        student.clearToken();
+        // 1. 디바이스 목록 삭제
+        studentDeviceRepository.deleteByStudentStudentId(studentId);
 
-        // 3. 디바이스 목록 삭제 (orphanRemoval = true 이용)
-        student.getDevices().clear();
-
-        // 4. 구독 목록 삭제
+        // 2. 구독 목록 삭제
         subscriptionRepository.deleteByUser(student);
 
-        // 변경사항 저장 (디바이스 삭제도 여기서 flush 되면서 반영됨)
-        studentRepository.save(student);
+        // 3. 연습 기록 삭제
+        practiceSessionRepository.deleteByStudent(student);
 
-        log.info("User withdrew: {}", studentId);
+        // 4. 시간표 삭제
+        timetableRepository.deleteByUser(student);
+
+        // 5. 사용자 정보 완전 삭제 (Hard Delete)
+        studentRepository.delete(student);
+
+        log.info("User completely deleted: {}", studentId);
     }
 
     /**

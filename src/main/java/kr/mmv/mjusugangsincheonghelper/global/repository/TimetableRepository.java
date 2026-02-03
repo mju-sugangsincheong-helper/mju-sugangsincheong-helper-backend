@@ -16,6 +16,11 @@ import java.util.Optional;
 public interface TimetableRepository extends JpaRepository<Timetable, Long> {
 
     /**
+     * 사용자의 시간표 삭제
+     */
+    void deleteByUser(Student user);
+
+    /**
      * 사용자의 시간표 조회
      */
     List<Timetable> findByUser(Student user);
