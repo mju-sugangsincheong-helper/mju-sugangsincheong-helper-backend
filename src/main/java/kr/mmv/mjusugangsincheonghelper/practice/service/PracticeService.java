@@ -38,7 +38,7 @@ public class PracticeService {
                 .orElseThrow(() -> new BaseException(ErrorCode.AUTH_USER_NOT_FOUND));
 
         PracticeSession session = PracticeSession.builder()
-                .user(student)
+                .student(student)
                 .countNum(request.getCountNum())
                 .timeMs(request.getTotalTimeMs())
                 .build();
@@ -66,7 +66,7 @@ public class PracticeService {
 
             int rank = 1;
             for (PracticeSession s : sessions) {
-                Student st = s.getUser();
+                Student st = s.getStudent();
                 RankEntry entry = RankEntry.builder()
                         .rank(rank++) 
                         .name(maskName(st.getName()))
@@ -115,7 +115,7 @@ public class PracticeService {
         }
         
         // 내 학과, 학년 정보 (모든 기록에서 동일하므로 첫 번째에서 추출)
-        Student student = myBestRecords.get(0).getUser();
+        Student student = myBestRecords.get(0).getStudent();
         String myDept = student.getDepartment();
         String myGrade = student.getGrade();
         
