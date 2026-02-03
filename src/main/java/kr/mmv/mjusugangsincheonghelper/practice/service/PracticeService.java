@@ -32,8 +32,24 @@ public class PracticeService {
     private final PracticeSessionRepository practiceSessionRepository;
     private final StudentRepository studentRepository;
 
+    private static final long MIN_BASE_TIME_MS = 2000;
+    private static final long MIN_TIME_PER_COURSE_MS = 500;
+    private static final int MAX_BASKET_COUNT = 10;
+
     @Transactional
     public void submitPractice(String studentId, SubmitPracticeRequestDto request) {
+        // 1. 장바구니 개수 검증
+        if (request.getCountNum() > MAX_BASKET_COUNT) {
+            throw new BaseException(ErrorCode.PRACTICE_BASKET_LIMIT_EXCEEDED);
+        }
+
+        // 2. 최소 시간 검증 (2초 + 과목당 0.5초)
+        long minTotalTime = MIN_BASE_TIME_MS + (request.getCountNum() * MIN_TIME_PER_COURSE_MS);
+        if (request.getTotalTimeMs() < minTotalTime) {
+            log.warn("Macro suspected: student={}, count={}, time={}", studentId, request.getCountNum(), request.getTotalTimeMs());
+            throw new BaseException(ErrorCode.PRACTICE_TIME_TOO_SHORT);
+        }
+
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new BaseException(ErrorCode.AUTH_USER_NOT_FOUND));
 
