@@ -57,6 +57,8 @@ public enum ErrorCode {
     // ===== Student Device (기기) =====
     DEVICE_NOT_FOUND(HttpStatus.NOT_FOUND, "DEVICE_001", "디바이스 정보를 찾을 수 없습니다"),
     DEVICE_ALREADY_EXISTS(HttpStatus.CONFLICT, "DEVICE_002", "이미 등록된 디바이스입니다"),
+    DEVICE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "DEVICE_003", "등록 가능한 최대 기기 개수를 초과했습니다"),
+    DEVICE_PLATFORM_INVALID(HttpStatus.BAD_REQUEST, "DEVICE_004", "지원하지 않는 플랫폼입니다"),
 
     // ===== Practice (연습) =====
     PRACTICE_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "PRACTICE_001", "연습 기록을 찾을 수 없습니다"),

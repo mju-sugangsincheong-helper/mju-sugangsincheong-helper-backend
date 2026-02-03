@@ -8,5 +8,6 @@ import kr.mmv.mjusugangsincheonghelper.studentdevice.dto.DeviceResponseDto;
 public interface StudentDeviceService {
     void registerDevice(String studentId, DeviceRegisterRequestDto request);
     List<DeviceResponseDto> getMyDevices(String studentId);
-    void deleteDevice(String studentId, String fcmToken);
+    void deleteDeviceById(String studentId, Long deviceId);
+    void deleteDeviceByToken(String studentId, String fcmToken);
 }

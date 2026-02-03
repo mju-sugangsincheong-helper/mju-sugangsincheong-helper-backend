@@ -26,6 +26,13 @@ import java.time.LocalDateTime;
 public class StudentDevice {
 
     /**
+     * 플랫폼 타입 정의
+     */
+    public enum DevicePlatform {
+        ANDROID, IOS, PC, ETC
+    }
+
+    /**
      * 디바이스 ID (Auto Increment)
      */
     @Id
@@ -49,10 +56,18 @@ public class StudentDevice {
 
     /**
      * 플랫폼
-     * android, ios, desktop_web
+     * ANDROID, IOS, PC, ETC
      */
-    @Column(name = "platform", length = 20)
-    private String platform;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "platform", nullable = false, length = 20)
+    private DevicePlatform platform;
+
+    /**
+     * 기기 모델명 (UI 표시용)
+     * 예: "iPhone 15 Pro", "Galaxy S24", "Windows Chrome"
+     */
+    @Column(name = "model_name", length = 100)
+    private String modelName;
 
     /**
      * User Agent
@@ -94,8 +109,9 @@ public class StudentDevice {
     /**
      * 디바이스 정보 업데이트
      */
-    public void updateDeviceInfo(String platform, String userAgent) {
+    public void updateDeviceInfo(DevicePlatform platform, String modelName, String userAgent) {
         this.platform = platform;
+        this.modelName = modelName;
         this.userAgent = userAgent;
         this.lastActiveAt = LocalDateTime.now();
     }
