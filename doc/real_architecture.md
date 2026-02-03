@@ -131,8 +131,9 @@ sequenceDiagram
     participant RP as Redis String<br/>(mju:Section:prev)
     participant M as Main Spring Server<br/>(Smart Controller)
     participant DB as RDBMS
-    participant Q as Redis List<br/>(mju:Section:notification:queue)
-    participant S as Notification Server<br/>(FCM Worker)
+    participant Q as Redis List<br/>(mju:notification:dispatch)
+    participant Cleanup as Redis List<br/>(mju:device:cleanup)
+    participant S as Notification Server<br/>(Spring FCM Worker)
 
     Note over C, RC: 🔄 1단계: 무지성 수집 (Every 10s)
     C->>C: 학교 서버에서 전체 강의 목록(3,000~건) Fetch
@@ -159,7 +160,7 @@ sequenceDiagram
             M->>DB: UPDATE 변경된 과목
             opt 만석 → 여석 발생
                 M->>DB: 구독자 조회 (user_id, fcm_token)
-                loop 400명씩 배치
+                loop 450명씩 배치
                     M->>Q: LPUSH 알림 페이로드
                 end
             end
@@ -172,11 +173,20 @@ sequenceDiagram
 
     Note over Q, S: 📢 3단계: 비동기 알림 발송
     loop 백그라운드 워커
-        S->>Q: BRPOP mju:section:notification:queue
+        S->>Q: BRPOP mju:notification:dispatch
         alt 메시지 수신
-            S->>S: FCM sendAll() (최대 400건)
+            S->>S: FCM sendAll() (최대 450건)
             Note right of S: RateLimiter + 재시도 적용
         end
+        opt 유효하지 않은 토큰 발견
+             S->>Cleanup: LPUSH mju:device:cleanup
+        end
+    end
+    
+    Note over Cleanup, M: 🧹 4단계: 토큰 정리
+    loop Main Server Worker
+        M->>Cleanup: BRPOP mju:device:cleanup
+        M->>DB: DELETE FROM student_devices WHERE token IN (...)
     end
 ```
 
@@ -193,7 +203,7 @@ sequenceDiagram
                *   이전 데이터가 무엇이든 상관없이 무조건 덮어씁니다.
 
 #### 2. Main Spring Server (The "Smart" Controller)
-*   **역할:** 데이터 동기화 및 알림 결정 (Coordinator)
+*   **역할:** 데이터 동기화, 알림 결정 (Coordinator) 및 토큰 관리
 *   **특징:** `Curr`(현재)와 `Prev`(과거)를 비교하여 변경사항을 감지하고, DB 최신화 및 알림 발송을 수행합니다.
 *   **동작 프로세스:**
     1. **event**:  RedisPubSubConfig 클래스를 통해 미리 `mju:section:change` 를 구독하다가 이벤트가 발생하면 아래 로직을 실행합니다
@@ -202,12 +212,46 @@ sequenceDiagram
     4.  **Comparison (Diff):** 두 JSON을 Java Object(Map)로 변환하여 메모리 상에서 비교합니다.
     5.  **Action:**
         *   **변경 없음:** 로직을 즉시 종료합니다. (DB 접근 없음)
-        *   **변경 있음:** 변경된 과목에 대해 DB `UPDATE`를 수행하고, `is_full`이 `True` -> `False`로 변한 경우 `SELECT user_id, email, fcm_token FROM SUBSCRIPTIONS JOIN USERS ...` 하여 알림을 보낼 인원을 추립니다. 추려서  최대 400개씩 잘라서 LPUSH `mju:section:notification:queue` 로 보냅니다
+        *   **변경 있음:** 변경된 과목에 대해 DB `UPDATE`를 수행하고, `is_full`이 `True` -> `False`로 변한 경우 `SELECT user_id, email, fcm_token FROM SUBSCRIPTIONS JOIN USERS ...` 하여 알림을 보낼 인원을 추립니다. 추려서  최대 450개(FCM 배치 제한 고려)씩 잘라서 LPUSH `mju:notification:dispatch` 로 보냅니다.
+        *   **토큰 정리:** `mju:device:cleanup` 큐를 모니터링하다가 들어오는 유효하지 않은 토큰들을 DB에서 삭제합니다.
 
 #### 3. Spring Notification Server (Sender)
-*   **역할:** 실제 알림 전송 (Worker)
-*   **동작:** 수신하면 FCM 서버로 메시지를 전송합니다.
-* action : `@PostConstruct` + 백그라운드 스레드 를 통해 BRPOP `mju:section:notification:queue` 을 받아서 멀티 캐스트 방식으로 fcm 으로 전송
+*   **역할:** 실제 알림 전송 (Worker) 및 유효하지 않은 토큰 필터링
+*   **특징:** Main Server와 분리된 별도의 Spring Boot 애플리케이션으로 동작합니다.
+*   **책임:**
+    1.  Redis Queue(`mju:notification:dispatch`) 모니터링 (BRPOP).
+    2.  알림 데이터(Payload) 파싱 및 플랫폼별(iOS/Android) 최적화 (Template 적용).
+    3.  FCM 메시지 객체 생성 및 발송.
+    4.  발송 중 발견된 유효하지 않은 토큰(Invalid Token)을 `mju:device:cleanup` 큐로 반환.
+    5.  주기적으로 `mju:notification:status` 갱신 (Heartbeat, 30초 주기).
+
+---
+#### Redis Interface Specification (알림 시스템)
+
+Main Server와 Notification Server 간의 통신 규약입니다.
+
+1.  **알림 발송 요청 (`mju:notification:dispatch`)**
+    *   **Main -> Notification**
+    *   Payload:
+        ```json
+        {
+          "event_type": "SECTION_VACANCY",
+          "priority": "HIGH",
+          "common_data": { "subject_name": "...", "section_code": "..." },
+          "recipients": [
+            { "token": "...", "user_name": "...", "platform": "ANDROID" }
+          ]
+        }
+        ```
+
+2.  **토큰 정리 요청 (`mju:device:cleanup`)**
+    *   **Notification -> Main**
+    *   FCM 발송 실패 시(Unregistered 등) 식별된 토큰 리스트.
+    *   Payload: `["token_1", "token_2", ...]`
+
+3.  **서버 생존 신고 (`mju:notification:status`)**
+    *   **Notification -> Monitor**
+    *   Value: "RUNNING" (TTL 60초)
 
 ---
 
@@ -918,7 +962,7 @@ erDiagram
 - 기능 2: 크롤러 헬스 체크 (Monitoring) `SET mju:system:status {timestamp} EX 60`
 
 ### 추가
-1. main spring 서버와 notification 서버는 논리적으로는 2개로 분리되어 있지만 물리적으로 1개로 유지 향후 서비스가 커지면 2개로 분리할 생각이 있음
+1. main spring 서버와 notification 서버는 각각 독립된 Spring Boot 애플리케이션(컨테이너)으로 분리하여 운영 (데이터 수집/처리 vs 알림 발송의 역할 분리)
 
 ### 추후
 1. 현재 수강신청 연습이 단순히 **"실패" 개념이 없고**, 사용자는 단순히 **과목을 클릭하는 행위만 수행**하며, 그 **반응 속도**(reaction time)만 측정되는데 수강신청 2시간 전부터 5분마다 실제 사용자들이 참여 할 수 있도록 하는 real 연습을 하고 싶다 이것은 완전히 프로젝트를 분리하여 이것과 완전히 분리하는것이 좋아 보임
