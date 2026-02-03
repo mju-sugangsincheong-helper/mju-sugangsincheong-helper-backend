@@ -43,31 +43,65 @@ public class StudentDeviceServiceImpl implements StudentDeviceService {
             throw new BaseException(ErrorCode.DEVICE_PLATFORM_INVALID);
         }
 
-        Optional<StudentDevice> existingDevice = studentDeviceRepository.findByFcmToken(request.getFcmToken());
+        String newToken = request.getFcmToken();
+        String oldToken = request.getOldToken();
+
+        // 1. Token Rotation (oldToken이 있는 경우)
+        if (oldToken != null && !oldToken.isEmpty()) {
+            Optional<StudentDevice> oldDeviceOpt = studentDeviceRepository.findByFcmToken(oldToken);
+
+            if (oldDeviceOpt.isPresent()) {
+                StudentDevice oldDevice = oldDeviceOpt.get();
+                // 본인 기기인지 확인
+                if (oldDevice.getStudent().getStudentId().equals(studentId)) {
+                    log.info("Rotate FCM Token: user={}, old={}, new={}", studentId, oldToken, newToken);
+
+                    // 새 토큰이 이미 DB에 존재하는지 확인 (충돌 방지)
+                    Optional<StudentDevice> collisionCheck = studentDeviceRepository.findByFcmToken(newToken);
+                    if (collisionCheck.isPresent()) {
+                        // 새 토큰이 이미 존재함 -> 기존 기기(oldDevice)는 더 이상 유효하지 않으므로 삭제
+                        // (이미 새 토큰으로 등록된 기기가 있으므로 업데이트 대신 삭제 처리)
+                        log.warn("Target token already exists during rotation. Deleting old device.");
+                        studentDeviceRepository.delete(oldDevice);
+                        // 이후 로직에서 existingDevice(newToken) 처리로 넘어감
+                    } else {
+                        // 정상 Rotation: 기존 레코드 업데이트 (이 메서드가 상태도 ACTIVE로 바꿈)
+                        oldDevice.updateFcmToken(newToken);
+                        oldDevice.updateDeviceInfo(platform, request.getModelName(), request.getUserAgent());
+                        return; // 종료
+                    }
+                } else {
+                    log.warn("Token rotation failed: ownership mismatch. user={}, owner={}", studentId, oldDevice.getStudent().getStudentId());
+                    // 소유권 불일치 시, 신규 등록 로직으로 진행
+                }
+            }
+        }
+
+        Optional<StudentDevice> existingDevice = studentDeviceRepository.findByFcmToken(newToken);
 
         if (existingDevice.isPresent()) {
             StudentDevice device = existingDevice.get();
             // 소유자가 변경된 경우 (다른 계정으로 로그인) - 기기 소유권 이전
             if (!device.getStudent().getStudentId().equals(studentId)) {
                 log.info("Device ownership changed: token={}, oldUser={}, newUser={}", 
-                        request.getFcmToken(), device.getStudent().getStudentId(), studentId);
+                        newToken, device.getStudent().getStudentId(), studentId);
                 
                 // 기존 사용자의 기기 개수는 감소하므로 체크 불필요
-                // 새 사용자의 기기 개수 체크 필요
+                // 새 사용자의 기기 개수 체크 필요 (활성 기기만 체크)
                 validateDeviceLimit(studentId);
                 
                 device.setStudent(student); 
             }
-            // 정보 업데이트 (마지막 활성 시간 포함)
+            // 정보 업데이트 (상태도 ACTIVE로 변경됨)
             device.updateDeviceInfo(platform, request.getModelName(), request.getUserAgent());
         } else {
-            // 신규 등록 시 개수 제한 체크
+            // 신규 등록 시 개수 제한 체크 (활성 기기만 체크)
             validateDeviceLimit(studentId);
 
             // 신규 등록
             StudentDevice newDevice = StudentDevice.builder()
                     .student(student)
-                    .fcmToken(request.getFcmToken())
+                    .fcmToken(newToken)
                     .platform(platform)
                     .modelName(request.getModelName())
                     .userAgent(request.getUserAgent())
@@ -78,8 +112,8 @@ public class StudentDeviceServiceImpl implements StudentDeviceService {
     }
 
     private void validateDeviceLimit(String studentId) {
-        List<StudentDevice> devices = studentDeviceRepository.findByStudentStudentId(studentId);
-        if (devices.size() >= MAX_DEVICE_COUNT) {
+        List<StudentDevice> activeDevices = studentDeviceRepository.findActiveByStudentId(studentId);
+        if (activeDevices.size() >= MAX_DEVICE_COUNT) {
             throw new BaseException(ErrorCode.DEVICE_LIMIT_EXCEEDED);
         }
     }
@@ -87,6 +121,7 @@ public class StudentDeviceServiceImpl implements StudentDeviceService {
     @Override
     @Transactional(readOnly = true)
     public List<DeviceResponseDto> getMyDevices(String studentId) {
+        // 사용자에게는 INVALID 상태인 기기도 모두 보여줌 (Soft Delete 시각화)
         return studentDeviceRepository.findByStudentStudentId(studentId).stream()
                 .map(DeviceResponseDto::from)
                 .collect(Collectors.toList());

@@ -76,8 +76,8 @@ public class NotificationService {
 
         if (studentIds.isEmpty()) return;
 
-        // 2. 학생 ID로 모든 기기 정보 조회 (JOIN FETCH)
-        List<StudentDevice> devices = studentDeviceRepository.findAllByStudentIdIn(studentIds);
+        // 2. 학생 ID로 모든 활성 기기 정보 조회 (JOIN FETCH)
+        List<StudentDevice> devices = studentDeviceRepository.findAllActiveByStudentIdIn(studentIds);
 
         if (devices.isEmpty()) {
             log.info("No devices registered for section: {}", section.getCurinm());

@@ -46,6 +46,7 @@ public class AuthWebSecurityConfig {
             "/webjars/**",
             "/actuator/**",
             "/error"
+
     };
 
     @Bean

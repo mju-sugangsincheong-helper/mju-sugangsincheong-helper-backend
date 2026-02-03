@@ -16,6 +16,8 @@ public class DeviceRegisterRequestDto {
     @NotBlank(message = "FCM 토큰은 필수입니다")
     private String fcmToken;
 
+    private String oldToken;
+
     @NotBlank(message = "플랫폼 정보는 필수입니다 (ANDROID, IOS, PC)")
     private String platform;
 

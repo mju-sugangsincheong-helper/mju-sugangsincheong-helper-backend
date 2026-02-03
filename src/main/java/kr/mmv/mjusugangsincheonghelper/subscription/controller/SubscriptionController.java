@@ -70,7 +70,7 @@ public class SubscriptionController {
     })
     public ResponseEntity<SingleSuccessResponseEnvelope<Void>> unsubscribe(
             @AuthenticationPrincipal UserDetails userDetails,
-            @Parameter(description = "분반번호 (sectioncls)") @PathVariable String sectioncls) {
+            @Parameter(description = "수강신청 강의 번호 (sectioncls)") @PathVariable String sectioncls) {
         subscriptionService.unsubscribe(userDetails.getUsername(), sectioncls);
         return ResponseEntity.ok(SingleSuccessResponseEnvelope.empty());
     }

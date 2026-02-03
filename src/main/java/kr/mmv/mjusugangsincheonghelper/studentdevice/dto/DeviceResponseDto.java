@@ -18,6 +18,9 @@ public class DeviceResponseDto {
     private Long id;
     private String fcmToken;
     private String platform;
+    private String status;
+    private String deactivatedReason;
+    private LocalDateTime deactivatedAt;
     private String modelName;
     private String userAgent;
     private LocalDateTime lastActiveAt;
@@ -28,6 +31,9 @@ public class DeviceResponseDto {
                 .id(device.getId())
                 .fcmToken(device.getFcmToken())
                 .platform(device.getPlatform().name())
+                .status(device.getStatus().name())
+                .deactivatedReason(device.getDeactivatedReason())
+                .deactivatedAt(device.getDeactivatedAt())
                 .modelName(device.getModelName())
                 .userAgent(device.getUserAgent())
                 .lastActiveAt(device.getLastActiveAt())

@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.List;
@@ -74,17 +73,24 @@ public class NotificationCleanupWorker {
         }
     }
 
-    @Transactional
     protected void handleCleanup(String json) {
         try {
             // List<String> 형태의 토큰 리스트 파싱
             List<String> invalidTokens = objectMapper.readValue(json, new TypeReference<List<String>>() {});
             
             if (invalidTokens != null && !invalidTokens.isEmpty()) {
-                log.info("[NotificationCleanup] Removing {} invalid tokens", invalidTokens.size());
-                // 하나씩 삭제 (혹은 Bulk Delete 쿼리 사용 가능)
+                log.info("[NotificationCleanup] Deactivating {} invalid tokens", invalidTokens.size());
+                // 하나씩 비활성화 (Soft Delete)
                 for (String token : invalidTokens) {
-                    studentDeviceRepository.deleteByFcmToken(token);
+                    try {
+                        studentDeviceRepository.findByFcmToken(token).ifPresent(device -> {
+                            device.deactivate("UNREGISTERED");
+                            studentDeviceRepository.save(device);
+                            log.info("[NotificationCleanup] Deactivated token: {}", token.substring(0, 10) + "...");
+                        });
+                    } catch (Exception e) {
+                        log.error("[NotificationCleanup] Failed to deactivate token: {}", token, e);
+                    }
                 }
             }
         } catch (Exception e) {
