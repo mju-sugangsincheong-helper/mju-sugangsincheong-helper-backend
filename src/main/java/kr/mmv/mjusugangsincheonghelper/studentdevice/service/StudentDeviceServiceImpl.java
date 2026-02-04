@@ -65,7 +65,7 @@ public class StudentDeviceServiceImpl implements StudentDeviceService {
                         studentDeviceRepository.delete(oldDevice);
                         // 이후 로직에서 existingDevice(newToken) 처리로 넘어감
                     } else {
-                        // 정상 Rotation: 기존 레코드 업데이트 (이 메서드가 상태도 ACTIVE로 바꿈)
+                        // 정상 Rotation: 기존 레코드 업데이트 (이 메서드가 기기를 활성화 상태로 변경)
                         oldDevice.updateFcmToken(newToken);
                         oldDevice.updateDeviceInfo(platform, request.getModelName(), request.getUserAgent());
                         return; // 종료
@@ -92,7 +92,7 @@ public class StudentDeviceServiceImpl implements StudentDeviceService {
                 
                 device.setStudent(student); 
             }
-            // 정보 업데이트 (상태도 ACTIVE로 변경됨)
+            // 정보 업데이트 (기기를 활성화 상태로 변경)
             device.updateDeviceInfo(platform, request.getModelName(), request.getUserAgent());
         } else {
             // 신규 등록 시 개수 제한 체크 (활성 기기만 체크)
@@ -121,7 +121,7 @@ public class StudentDeviceServiceImpl implements StudentDeviceService {
     @Override
     @Transactional(readOnly = true)
     public List<DeviceResponseDto> getMyDevices(String studentId) {
-        // 사용자에게는 INVALID 상태인 기기도 모두 보여줌 (Soft Delete 시각화)
+        // 사용자에게는 비활성화된 기기도 모두 보여줌 (Soft Delete 시각화)
         return studentDeviceRepository.findByStudentStudentId(studentId).stream()
                 .map(DeviceResponseDto::from)
                 .collect(Collectors.toList());
