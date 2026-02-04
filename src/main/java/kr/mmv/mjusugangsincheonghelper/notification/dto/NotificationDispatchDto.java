@@ -43,6 +43,8 @@ public class NotificationDispatchDto {
     public static class Recipient {
         private String token;
         private String user_name;
-        private String platform;
+        
+        // Detailed Info
+        private String os_family;
     }
 }

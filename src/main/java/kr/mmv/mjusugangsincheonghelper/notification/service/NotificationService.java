@@ -97,7 +97,7 @@ public class NotificationService {
                 .map(device -> NotificationDispatchDto.Recipient.builder()
                         .token(device.getFcmToken())
                         .user_name(studentNames.get(device.getStudent().getStudentId()))
-                        .platform(device.getPlatform().name())
+                        .os_family(device.getOsFamily())
                         .build())
                 .collect(Collectors.toList());
 

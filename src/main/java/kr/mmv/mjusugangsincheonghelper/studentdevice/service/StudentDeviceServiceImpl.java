@@ -35,14 +35,6 @@ public class StudentDeviceServiceImpl implements StudentDeviceService {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new BaseException(ErrorCode.AUTH_USER_NOT_FOUND));
 
-        // 플랫폼 검증 및 변환
-        StudentDevice.DevicePlatform platform;
-        try {
-            platform = StudentDevice.DevicePlatform.valueOf(request.getPlatform().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new BaseException(ErrorCode.DEVICE_PLATFORM_INVALID);
-        }
-
         String newToken = request.getFcmToken();
         String oldToken = request.getOldToken();
 
@@ -67,7 +59,13 @@ public class StudentDeviceServiceImpl implements StudentDeviceService {
                     } else {
                         // 정상 Rotation: 기존 레코드 업데이트 (이 메서드가 기기를 활성화 상태로 변경)
                         oldDevice.updateFcmToken(newToken);
-                        oldDevice.updateDeviceInfo(platform, request.getModelName(), request.getUserAgent());
+                        oldDevice.updateDeviceInfo(
+                                request.getOsFamily(),
+                                request.getOsVersion(),
+                                request.getBrowserName(),
+                                request.getBrowserVersion(),
+                                request.getUserAgent()
+                        );
                         return; // 종료
                     }
                 } else {
@@ -93,7 +91,13 @@ public class StudentDeviceServiceImpl implements StudentDeviceService {
                 device.setStudent(student); 
             }
             // 정보 업데이트 (기기를 활성화 상태로 변경)
-            device.updateDeviceInfo(platform, request.getModelName(), request.getUserAgent());
+            device.updateDeviceInfo(
+                    request.getOsFamily(),
+                    request.getOsVersion(),
+                    request.getBrowserName(),
+                    request.getBrowserVersion(),
+                    request.getUserAgent()
+            );
         } else {
             // 신규 등록 시 개수 제한 체크 (활성 기기만 체크)
             validateDeviceLimit(studentId);
@@ -102,8 +106,10 @@ public class StudentDeviceServiceImpl implements StudentDeviceService {
             StudentDevice newDevice = StudentDevice.builder()
                     .student(student)
                     .fcmToken(newToken)
-                    .platform(platform)
-                    .modelName(request.getModelName())
+                    .osFamily(request.getOsFamily())
+                    .osVersion(request.getOsVersion())
+                    .browserName(request.getBrowserName())
+                    .browserVersion(request.getBrowserVersion())
                     .userAgent(request.getUserAgent())
                     .lastActiveAt(LocalDateTime.now())
                     .build();

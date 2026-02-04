@@ -17,11 +17,15 @@ public class DeviceResponseDto {
 
     private Long id;
     private String fcmToken;
-    private String platform;
+    
+    private String osFamily;
+    private String osVersion;
+    private String browserName;
+    private String browserVersion;
+    
     private boolean isActivated;
     private String deactivatedReason;
     private LocalDateTime deactivatedAt;
-    private String modelName;
     private String userAgent;
     private LocalDateTime lastActiveAt;
     private LocalDateTime createdAt;
@@ -30,11 +34,13 @@ public class DeviceResponseDto {
         return DeviceResponseDto.builder()
                 .id(device.getId())
                 .fcmToken(device.getFcmToken())
-                .platform(device.getPlatform().name())
+                .osFamily(device.getOsFamily())
+                .osVersion(device.getOsVersion())
+                .browserName(device.getBrowserName())
+                .browserVersion(device.getBrowserVersion())
                 .isActivated(device.isActivated())
                 .deactivatedReason(device.getDeactivatedReason())
                 .deactivatedAt(device.getDeactivatedAt())
-                .modelName(device.getModelName())
                 .userAgent(device.getUserAgent())
                 .lastActiveAt(device.getLastActiveAt())
                 .createdAt(device.getCreatedAt())

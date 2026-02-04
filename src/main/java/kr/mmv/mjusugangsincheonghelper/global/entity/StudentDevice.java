@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
        uniqueConstraints = @UniqueConstraint(columnNames = "fcm_token"),
        indexes = {
            @Index(name = "idx_student_devices_student_id", columnList = "student_id"),
+           @Index(name = "idx_student_devices_os_env", columnList = "os_family"),
            @Index(name = "idx_student_devices_fcm_token", columnList = "fcm_token")
        })
 @Getter
@@ -24,13 +25,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StudentDevice {
-
-    /**
-     * 플랫폼 타입 정의
-     */
-    public enum DevicePlatform {
-        ANDROID, IOS, PC, ETC
-    }
 
     /**
      * 디바이스 ID (Auto Increment)
@@ -54,13 +48,19 @@ public class StudentDevice {
     @Column(name = "fcm_token", nullable = false, length = 500, unique = true)
     private String fcmToken;
 
-    /**
-     * 플랫폼
-     * ANDROID, IOS, PC, ETC
-     */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "platform", nullable = false, length = 20)
-    private DevicePlatform platform;
+    // 1. OS 정보 (macOS, Windows, iOS, Android, iPadOS 등)
+    @Column(name = "os_family", length = 50)
+    private String osFamily;  // "macOS", "Windows", "iOS", "Android", "iPadOS"
+
+    @Column(name = "os_version", length = 20)
+    private String osVersion; // "14.0", "11", "17.0"
+
+    // 2. 브라우저 정보
+    @Column(name = "browser_name", length = 50)
+    private String browserName;  // "Chrome", "Safari", "Firefox", "Edge"
+
+    @Column(name = "browser_version", length = 20)
+    private String browserVersion; // "120.0.0"
 
     /**
      * 알림 활성화 여부
@@ -83,17 +83,10 @@ public class StudentDevice {
     private LocalDateTime deactivatedAt;
 
     /**
-     * 기기 모델명 (UI 표시용)
-     * 예: "iPhone 15 Pro", "Galaxy S24", "Windows Chrome"
-     */
-    @Column(name = "model_name", length = 100)
-    private String modelName;
-
-    /**
      * User Agent
      * 디버깅용 기기 정보
      */
-    @Column(name = "user_agent", length = 500)
+    @Column(name = "user_agent", length = 1000)
     private String userAgent;
 
     /**
@@ -128,23 +121,25 @@ public class StudentDevice {
      */
     public void updateFcmToken(String fcmToken) {
         this.fcmToken = fcmToken;
-        this.lastActiveAt = LocalDateTime.now();
-        this.isActivated = true;
-        this.deactivatedReason = null;
-        this.deactivatedAt = null;
+        updateLastActiveAt();
     }
 
     /**
-     * 디바이스 정보 업데이트
+     * Platform.js 또는 User-Agent 파싱 결과로 업데이트
      */
-    public void updateDeviceInfo(DevicePlatform platform, String modelName, String userAgent) {
-        this.platform = platform;
-        this.modelName = modelName;
+    public void updateDeviceInfo(
+        String osFamily,
+        String osVersion,
+        String browserName,
+        String browserVersion,
+        String userAgent
+    ) {
+        this.osFamily = osFamily;
+        this.osVersion = osVersion;
+        this.browserName = browserName;
+        this.browserVersion = browserVersion;
         this.userAgent = userAgent;
-        this.lastActiveAt = LocalDateTime.now();
-        this.isActivated = true;
-        this.deactivatedReason = null;
-        this.deactivatedAt = null;
+        updateLastActiveAt();
     }
 
     /**
@@ -154,5 +149,13 @@ public class StudentDevice {
         this.isActivated = false;
         this.deactivatedReason = reason;
         this.deactivatedAt = LocalDateTime.now();
+    }
+
+    public boolean isIos() {
+        return "iOS".equals(this.osFamily) || "iPadOS".equals(this.osFamily);
+    }
+
+    public boolean isAndroid() {
+        return "Android".equals(this.osFamily);
     }
 }

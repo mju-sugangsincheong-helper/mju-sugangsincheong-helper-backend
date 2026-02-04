@@ -18,12 +18,20 @@ public class DeviceRegisterRequestDto {
 
     private String oldToken;
 
-    @NotBlank(message = "플랫폼 정보는 필수입니다 (ANDROID, IOS, PC)")
-    private String platform;
+    // 1. OS 정보
+    @Size(max = 50, message = "OS 이름은 50자 이내여야 합니다")
+    private String osFamily;
 
-    @Size(max = 100, message = "모델명은 100자 이내여야 합니다")
-    private String modelName;
+    @Size(max = 20, message = "OS 버전은 20자 이내여야 합니다")
+    private String osVersion;
 
-    @Size(max = 500, message = "User Agent 정보는 500자 이내여야 합니다")
+    // 2. 브라우저 정보
+    @Size(max = 50, message = "브라우저 이름은 50자 이내여야 합니다")
+    private String browserName;
+
+    @Size(max = 20, message = "브라우저 버전은 20자 이내여야 합니다")
+    private String browserVersion;
+
+    @Size(max = 1000, message = "User Agent 정보는 1000자 이내여야 합니다")
     private String userAgent;
 }
