@@ -134,6 +134,6 @@ public class GlobalExceptionHandler {
         log.error("Unexpected exception occurred", ex);
         return ResponseEntity
                 .status(ErrorCode.GLOBAL_INTERNAL_SERVER_ERROR.getStatus())
-                .body(ErrorResponseEnvelope.of(ErrorCode.GLOBAL_INTERNAL_SERVER_ERROR));
+                .body(ErrorResponseEnvelope.of(ErrorCode.GLOBAL_INTERNAL_SERVER_ERROR, ex.getMessage()));
     }
 }
