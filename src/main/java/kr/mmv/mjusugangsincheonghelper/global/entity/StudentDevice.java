@@ -81,6 +81,13 @@ public class StudentDevice {
     private DeviceStatus status = DeviceStatus.ACTIVE;
 
     /**
+     * 알림 활성화 여부
+     */
+    @Column(name = "is_activated", nullable = false)
+    @Builder.Default
+    private boolean isActivated = true;
+
+    /**
      * 비활성화 사유
      * 예: "UNREGISTERED", "INVALID_ARGUMENT"
      */
@@ -129,6 +136,7 @@ public class StudentDevice {
         this.lastActiveAt = LocalDateTime.now();
         if (this.status != DeviceStatus.ACTIVE) {
             this.status = DeviceStatus.ACTIVE;
+            this.isActivated = true;
             this.deactivatedReason = null;
             this.deactivatedAt = null;
         }
@@ -141,6 +149,7 @@ public class StudentDevice {
         this.fcmToken = fcmToken;
         this.lastActiveAt = LocalDateTime.now();
         this.status = DeviceStatus.ACTIVE;
+        this.isActivated = true;
         this.deactivatedReason = null;
         this.deactivatedAt = null;
     }
@@ -154,6 +163,7 @@ public class StudentDevice {
         this.userAgent = userAgent;
         this.lastActiveAt = LocalDateTime.now();
         this.status = DeviceStatus.ACTIVE;
+        this.isActivated = true;
         this.deactivatedReason = null;
         this.deactivatedAt = null;
     }
@@ -163,6 +173,7 @@ public class StudentDevice {
      */
     public void deactivate(String reason) {
         this.status = DeviceStatus.INVALID;
+        this.isActivated = false;
         this.deactivatedReason = reason;
         this.deactivatedAt = LocalDateTime.now();
     }

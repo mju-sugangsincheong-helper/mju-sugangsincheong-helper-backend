@@ -186,7 +186,7 @@ sequenceDiagram
     Note over Cleanup, M: 🧹 4단계: 토큰 정리
     loop Main Server Worker
         M->>Cleanup: BRPOP mju:device:cleanup
-        M->>DB: DELETE FROM student_devices WHERE token IN (...)
+        M->>DB: UPDATE student_devices SET active=false ...
     end
 ```
 
@@ -213,7 +213,7 @@ sequenceDiagram
     5.  **Action:**
         *   **변경 없음:** 로직을 즉시 종료합니다. (DB 접근 없음)
         *   **변경 있음:** 변경된 과목에 대해 DB `UPDATE`를 수행하고, `is_full`이 `True` -> `False`로 변한 경우 `SELECT user_id, email, fcm_token FROM SUBSCRIPTIONS JOIN USERS ...` 하여 알림을 보낼 인원을 추립니다. 추려서  최대 450개(FCM 배치 제한 고려)씩 잘라서 LPUSH `mju:notification:dispatch` 로 보냅니다.
-        *   **토큰 정리:** `mju:device:cleanup` 큐를 모니터링하다가 들어오는 유효하지 않은 토큰들을 DB에서 삭제합니다.
+        *   **토큰 정리:** `mju:device:cleanup` 큐를 모니터링하다가 들어오는 유효하지 않은 토큰들을 DB에서 비활성화(Deactivate) 처리합니다.
 
 #### 3. Spring Notification Server (Sender)
 *   **역할:** 실제 알림 전송 (Worker) 및 유효하지 않은 토큰 필터링
@@ -233,6 +233,7 @@ Main Server와 Notification Server 간의 통신 규약입니다.
 1.  **알림 발송 요청 (`mju:notification:dispatch`)**
     *   **Main -> Notification**
     *   Payload:
+
         ```json
         {
           "event_type": "SECTION_VACANCY",
@@ -252,6 +253,15 @@ Main Server와 Notification Server 간의 통신 규약입니다.
 3.  **서버 생존 신고 (`mju:notification:status`)**
     *   **Notification -> Monitor**
     *   Value: "RUNNING" (TTL 60초)
+
+#### 알림 시스템 상태 정보
+**조건**
+- 모바일의 네이티브 없음
+- 일반 브라우저 상황에서는 push 알림을 지원하지 않음
+- PWA 상황에서만 알림기능을 지원
+
+[PWA PUSH Alarm 가이드](PWA%20PUSH%20Alarm%20가이드.md)
+
 
 ---
 
@@ -786,9 +796,12 @@ erDiagram
         bigint id PK "AUTO_INCREMENT"
         bigint student_id FK "STUDENTS.id"
         varchar fcm_token "FCM 토큰 (Unique)"
-        varchar platform "android, ios, desktop_web"
-        varchar user_agent "디버깅용 기기 정보"
+        varchar platform "android, ios, desktop"
+        varchar user_agent "기기 정보"
+        boolean is_active "활성 여부 (Default: true)"
+        varchar deactivation_reason "비활성화 사유 (UNREGISTERED 등)"
         datetime last_active_at "마지막 활성 시간"
+        datetime deactivated_at "비활성화 시각"
         datetime created_at
     }
     
