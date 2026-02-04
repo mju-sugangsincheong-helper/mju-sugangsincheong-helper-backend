@@ -33,15 +33,6 @@ public class StudentDevice {
     }
 
     /**
-     * 디바이스 상태 정의
-     * ACTIVE: 정상 활성 상태
-     * INVALID: 유효하지 않은 토큰 (Soft Deleted)
-     */
-    public enum DeviceStatus {
-        ACTIVE, INVALID
-    }
-
-    /**
      * 디바이스 ID (Auto Increment)
      */
     @Id
@@ -70,15 +61,6 @@ public class StudentDevice {
     @Enumerated(EnumType.STRING)
     @Column(name = "platform", nullable = false, length = 20)
     private DevicePlatform platform;
-
-    /**
-     * 디바이스 상태
-     * 기본값: ACTIVE
-     */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
-    @Builder.Default
-    private DeviceStatus status = DeviceStatus.ACTIVE;
 
     /**
      * 알림 활성화 여부
@@ -134,8 +116,7 @@ public class StudentDevice {
      */
     public void updateLastActiveAt() {
         this.lastActiveAt = LocalDateTime.now();
-        if (this.status != DeviceStatus.ACTIVE) {
-            this.status = DeviceStatus.ACTIVE;
+        if (!this.isActivated) {
             this.isActivated = true;
             this.deactivatedReason = null;
             this.deactivatedAt = null;
@@ -148,7 +129,6 @@ public class StudentDevice {
     public void updateFcmToken(String fcmToken) {
         this.fcmToken = fcmToken;
         this.lastActiveAt = LocalDateTime.now();
-        this.status = DeviceStatus.ACTIVE;
         this.isActivated = true;
         this.deactivatedReason = null;
         this.deactivatedAt = null;
@@ -162,7 +142,6 @@ public class StudentDevice {
         this.modelName = modelName;
         this.userAgent = userAgent;
         this.lastActiveAt = LocalDateTime.now();
-        this.status = DeviceStatus.ACTIVE;
         this.isActivated = true;
         this.deactivatedReason = null;
         this.deactivatedAt = null;
@@ -172,7 +151,6 @@ public class StudentDevice {
      * 기기 비활성화 (Soft Delete)
      */
     public void deactivate(String reason) {
-        this.status = DeviceStatus.INVALID;
         this.isActivated = false;
         this.deactivatedReason = reason;
         this.deactivatedAt = LocalDateTime.now();

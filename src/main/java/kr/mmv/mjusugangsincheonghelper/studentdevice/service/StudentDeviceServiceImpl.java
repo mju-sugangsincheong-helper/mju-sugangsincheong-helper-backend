@@ -27,7 +27,7 @@ public class StudentDeviceServiceImpl implements StudentDeviceService {
     private final StudentDeviceRepository studentDeviceRepository;
     private final StudentRepository studentRepository;
     
-    private static final int MAX_DEVICE_COUNT = 5;
+    private static final int MAX_DEVICE_COUNT = 100;
 
     @Override
     @Transactional

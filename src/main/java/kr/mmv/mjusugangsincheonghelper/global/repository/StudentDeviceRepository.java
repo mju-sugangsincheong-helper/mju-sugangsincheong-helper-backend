@@ -21,7 +21,7 @@ public interface StudentDeviceRepository extends JpaRepository<StudentDevice, Lo
     /**
      * 학생 ID로 활성 디바이스 목록 조회
      */
-    @Query("SELECT d FROM StudentDevice d WHERE d.student.studentId = :studentId AND d.status = 'ACTIVE' AND d.isActivated = true")
+    @Query("SELECT d FROM StudentDevice d WHERE d.student.studentId = :studentId AND d.isActivated = true")
     List<StudentDevice> findActiveByStudentId(@Param("studentId") String studentId);
 
     /**
@@ -42,13 +42,13 @@ public interface StudentDeviceRepository extends JpaRepository<StudentDevice, Lo
     /**
      * 학생 ID로 모든 활성 FCM 토큰 조회
      */
-    @Query("SELECT d.fcmToken FROM StudentDevice d WHERE d.student.studentId = :studentId AND d.status = 'ACTIVE' AND d.isActivated = true")
+    @Query("SELECT d.fcmToken FROM StudentDevice d WHERE d.student.studentId = :studentId AND d.isActivated = true")
     List<String> findActiveFcmTokensByStudentId(@Param("studentId") String studentId);
 
     /**
      * 여러 학생 ID로 모든 활성 FCM 토큰 조회
      */
-    @Query("SELECT d.fcmToken FROM StudentDevice d WHERE d.student.studentId IN :studentIds AND d.status = 'ACTIVE' AND d.isActivated = true")
+    @Query("SELECT d.fcmToken FROM StudentDevice d WHERE d.student.studentId IN :studentIds AND d.isActivated = true")
     List<String> findActiveFcmTokensByStudentIds(@Param("studentIds") List<String> studentIds);
 
     /**
@@ -65,8 +65,8 @@ public interface StudentDeviceRepository extends JpaRepository<StudentDevice, Lo
 
     /**
      * 특정 학생들의 모든 활성 기기 정보를 한 번에 가져오기 (Fetch Join)
-     * - 알림 발송용이므로 status = 'ACTIVE' 및 isActivated = true 필수
+     * - 알림 발송용이므로 isActivated = true 필수
      */
-    @Query("SELECT d FROM StudentDevice d JOIN FETCH d.student WHERE d.student.studentId IN :studentIds AND d.status = 'ACTIVE' AND d.isActivated = true")
+    @Query("SELECT d FROM StudentDevice d JOIN FETCH d.student WHERE d.student.studentId IN :studentIds AND d.isActivated = true")
     List<StudentDevice> findAllActiveByStudentIdIn(@Param("studentIds") List<String> studentIds);
 }

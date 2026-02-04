@@ -29,19 +29,19 @@ public class StudentDeviceController {
 
     @PostMapping
     @Operation(
-            summary = "디바이스 등록/갱신",
-            description = "FCM 토큰을 등록하거나 기존 토큰 정보를 갱신합니다. (앱 실행 시 또는 알림 켜기 시 호출)",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "등록/갱신 성공")
-            }
+        summary = "디바이스 등록/갱신",
+        description = "FCM 토큰을 등록하거나 기존 토큰 정보를 갱신합니다. (앱 실행 시 또는 알림 켜기 시 호출)",
+        responses = {
+            @ApiResponse(responseCode = "200", description = "등록/갱신 성공")
+        }
     )
     @OperationErrorCodes({
-            ErrorCode.AUTH_SECURITY_UNAUTHORIZED_ACCESS,
-            ErrorCode.AUTH_USER_NOT_FOUND,
-            ErrorCode.DEVICE_PLATFORM_INVALID,
-            ErrorCode.DEVICE_LIMIT_EXCEEDED,
-            ErrorCode.GLOBAL_VALIDATION_ERROR,
-            ErrorCode.GLOBAL_INTERNAL_SERVER_ERROR
+        ErrorCode.AUTH_SECURITY_UNAUTHORIZED_ACCESS,
+        ErrorCode.AUTH_USER_NOT_FOUND,
+        ErrorCode.DEVICE_PLATFORM_INVALID,
+        ErrorCode.DEVICE_LIMIT_EXCEEDED,
+        ErrorCode.GLOBAL_VALIDATION_ERROR,
+        ErrorCode.GLOBAL_INTERNAL_SERVER_ERROR
     })
     public ResponseEntity<SingleSuccessResponseEnvelope<Void>> registerDevice(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -52,15 +52,15 @@ public class StudentDeviceController {
 
     @GetMapping
     @Operation(
-            summary = "내 디바이스 목록 조회",
-            description = "현재 사용자의 등록된 모든 디바이스 목록을 조회합니다.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "조회 성공")
-            }
+        summary = "내 디바이스 목록 조회",
+        description = "현재 사용자의 등록된 모든 디바이스 목록을 조회합니다.",
+        responses = {
+            @ApiResponse(responseCode = "200", description = "조회 성공")
+        }
     )
     @OperationErrorCodes({
-            ErrorCode.AUTH_SECURITY_UNAUTHORIZED_ACCESS,
-            ErrorCode.GLOBAL_INTERNAL_SERVER_ERROR
+        ErrorCode.AUTH_SECURITY_UNAUTHORIZED_ACCESS,
+        ErrorCode.GLOBAL_INTERNAL_SERVER_ERROR
     })
     public ResponseEntity<SingleSuccessResponseEnvelope<List<DeviceResponseDto>>> getMyDevices(
             @AuthenticationPrincipal UserDetails userDetails) {
