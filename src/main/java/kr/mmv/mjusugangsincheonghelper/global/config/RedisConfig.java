@@ -50,6 +50,9 @@ public class RedisConfig {
         // [B] 수강신청 연습 랭킹 ("ranking"): 30초
         ttlConfigs.put("ranking", defaultConfig.entryTtl(java.time.Duration.ofSeconds(30)));
 
+        // [C] 학과 목록 ("departments"): 5분 (학과 정보는 자주 변경되지 않음)
+        ttlConfigs.put("departments", defaultConfig.entryTtl(java.time.Duration.ofMinutes(5)));
+
         return org.springframework.data.redis.cache.RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)
                 .withInitialCacheConfigurations(ttlConfigs)

@@ -41,6 +41,11 @@ public enum ErrorCode {
     SECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "SECTION_001", "강의를 찾을 수 없습니다"),
     SECTION_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "SECTION_002", "해당 강의는 현재 이용할 수 없습니다"),
 
+    // ===== Department (학과) =====
+    DEPARTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "DEPT_001", "해당 조건의 학과를 찾을 수 없습니다"),
+    DEPARTMENT_INVALID_CAMPUS(HttpStatus.BAD_REQUEST, "DEPT_002", "잘못된 캠퍼스 코드입니다 (10: 자연, 20: 인문)"),
+    DEPARTMENT_DATA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "DEPT_003", "학과 데이터를 불러올 수 없습니다"),
+
     // ==== statistic (통계) =====
     STATISTIC_DATA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "STATISTIC_001", "통계 데이터를 불러올 수 없습니다"),
 

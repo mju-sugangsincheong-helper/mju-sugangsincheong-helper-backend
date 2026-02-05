@@ -74,4 +74,17 @@ public interface SectionRepository extends JpaRepository<Section, String> {
      * 특정 대상학년 강의 조회 (0은 전체, 1~4는 해당 학년)
      */
     List<Section> findByComyearAndIsActiveTrue(Integer comyear);
+
+    /**
+     * 전체 학과 목록 조회 (중복 제거)
+     * 활성화된 강의에서 학과코드, 학과명, 캠퍼스구분을 DISTINCT 조회
+     */
+    @Query("SELECT DISTINCT s.deptcd, s.deptnm, s.campusdiv FROM Section s WHERE s.isActive = true AND s.deptcd IS NOT NULL ORDER BY s.campusdiv, s.deptnm")
+    List<Object[]> findDistinctDepartments();
+
+    /**
+     * 캠퍼스별 학과 목록 조회 (중복 제거)
+     */
+    @Query("SELECT DISTINCT s.deptcd, s.deptnm, s.campusdiv FROM Section s WHERE s.isActive = true AND s.campusdiv = :campusdiv AND s.deptcd IS NOT NULL ORDER BY s.deptnm")
+    List<Object[]> findDistinctDepartmentsByCampus(@Param("campusdiv") String campusdiv);
 }
