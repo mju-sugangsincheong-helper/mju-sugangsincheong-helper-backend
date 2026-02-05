@@ -1,8 +1,11 @@
 package kr.mmv.mjusugangsincheonghelper.statistic.service;
 
 import kr.mmv.mjusugangsincheonghelper.global.entity.SectionStat;
+import kr.mmv.mjusugangsincheonghelper.global.repository.SectionRepository;
 import kr.mmv.mjusugangsincheonghelper.global.repository.SectionStatRepository;
+import kr.mmv.mjusugangsincheonghelper.global.repository.SubscriptionRepository;
 import kr.mmv.mjusugangsincheonghelper.statistic.dto.SectionStatResponseDto;
+import kr.mmv.mjusugangsincheonghelper.statistic.dto.SummaryStatsResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -11,12 +14,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class StatisticServiceImpl implements StatisticService {
 
     private final SectionStatRepository sectionStatRepository;
+    private final SectionRepository sectionRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
     /**
      * 전체 구독 통계 조회 (Global Snapshot)
@@ -55,4 +61,43 @@ public class StatisticServiceImpl implements StatisticService {
 
         return response;
     }
+
+    /**
+     * 홈페이지 통계 요약 조회
+     * - 공지사항 형식으로 서비스 현황을 표시
+     * - TTL 19초 캐싱 적용
+     */
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "mju:stats", key = "'summary'", cacheManager = "cacheManager", sync = true)
+    public SummaryStatsResponseDto getSummaryStats() {
+        // 1. 총 과목 개수 (활성화된 강의)
+        long totalSections = sectionRepository.countByIsActiveTrue();
+
+        // 2. 총 구독자 수 (구독을 1개 이상 가진 고유 학생 수)
+        long totalSubscribers = subscriptionRepository.countDistinctSubscribers();
+
+        // 3. 정원 마감 과목 개수
+        long fullSections = sectionRepository.countByIsFullTrueAndIsActiveTrue();
+
+        // 4. 학과별 구독자 수 TOP 10
+        List<Object[]> departmentStats = subscriptionRepository.countByDepartmentTop10();
+        List<SummaryStatsResponseDto.DepartmentSubscription> topDepartments = departmentStats.stream()
+                .limit(10)
+                .map(row -> SummaryStatsResponseDto.DepartmentSubscription.builder()
+                        .departmentName((String) row[0])
+                        .subscriberCount((Long) row[1])
+                        .build())
+                .collect(Collectors.toList());
+
+        return SummaryStatsResponseDto.builder()
+                .totalSections(totalSections)
+                .totalSubscribers(totalSubscribers)
+                .fullSections(fullSections)
+                .totalSectionsForFullRatio(totalSections)
+                .topDepartments(topDepartments)
+                .updatedAt(System.currentTimeMillis() / 1000)
+                .build();
+    }
 }
+

@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.mmv.mjusugangsincheonghelper.global.annotation.OperationErrorCodes;
 import kr.mmv.mjusugangsincheonghelper.global.api.code.ErrorCode;
 import kr.mmv.mjusugangsincheonghelper.global.api.envelope.SingleSuccessResponseEnvelope;
+import kr.mmv.mjusugangsincheonghelper.statistic.dto.SummaryStatsResponseDto;
 import kr.mmv.mjusugangsincheonghelper.statistic.service.StatisticService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +37,29 @@ public class StatisticController {
     })
     public ResponseEntity<SingleSuccessResponseEnvelope<Map<String, Object>>> getSubscriptionStats() {
         Map<String, Object> stats = statisticService.getSubscriptionStats();
+        return ResponseEntity.ok(SingleSuccessResponseEnvelope.of(stats));
+    }
+
+    @GetMapping("/summary")
+    @Operation(
+            summary = "홈페이지 통계 요약 조회",
+            description = """
+                    공지사항 형식으로 서비스 현황을 표시합니다. (19초 캐싱)
+                    
+                    - 총 과목 개수: 현재 모니터링 중인 강의 수
+                    - 총 구독자 수: 알림을 설정한 학생 수
+                    - 정원 마감 과목: 마감된 과목 수 / 전체 과목 수
+                    - TOP 10 학과: 구독자가 많은 학과 순위
+                    """,
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "조회 성공")
+            }
+    )
+    @OperationErrorCodes({
+            ErrorCode.GLOBAL_INTERNAL_SERVER_ERROR
+    })
+    public ResponseEntity<SingleSuccessResponseEnvelope<SummaryStatsResponseDto>> getSummaryStats() {
+        SummaryStatsResponseDto stats = statisticService.getSummaryStats();
         return ResponseEntity.ok(SingleSuccessResponseEnvelope.of(stats));
     }
 }

@@ -87,4 +87,14 @@ public interface SectionRepository extends JpaRepository<Section, String> {
      */
     @Query("SELECT DISTINCT s.deptcd, s.deptnm, s.campusdiv FROM Section s WHERE s.isActive = true AND s.campusdiv = :campusdiv AND s.deptcd IS NOT NULL ORDER BY s.deptnm")
     List<Object[]> findDistinctDepartmentsByCampus(@Param("campusdiv") String campusdiv);
+
+    /**
+     * 활성화된 총 과목 수 조회 (통계용)
+     */
+    long countByIsActiveTrue();
+
+    /**
+     * 정원 마감된 과목 수 조회 (통계용)
+     */
+    long countByIsFullTrueAndIsActiveTrue();
 }

@@ -79,4 +79,17 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
      * 사용자의 모든 구독 삭제
      */
     void deleteByUser(Student user);
+
+    /**
+     * 구독을 1개 이상 가진 고유 학생 수 조회 (통계용)
+     */
+    @Query("SELECT COUNT(DISTINCT s.user) FROM Subscription s")
+    long countDistinctSubscribers();
+
+    /**
+     * 학과별 구독자 수 TOP 10 조회
+     * Student.department 기준, 구독자 수 내림차순
+     */
+    @Query("SELECT s.user.department, COUNT(DISTINCT s.user) FROM Subscription s WHERE s.user.department IS NOT NULL GROUP BY s.user.department ORDER BY COUNT(DISTINCT s.user) DESC")
+    List<Object[]> countByDepartmentTop10();
 }
