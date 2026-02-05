@@ -40,6 +40,7 @@ public class AuthWebSecurityConfig {
             "/api/v1/system/status",
             "/api/v1/practice/ranks",
             "/api/v1/stats/subscription",
+            "/api/v1/stats/summary",
             "/api/v1/notices/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
