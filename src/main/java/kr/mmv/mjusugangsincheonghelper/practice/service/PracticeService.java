@@ -176,42 +176,56 @@ public class PracticeService {
 
     @Cacheable(value = "ranking", key = "'dept_summary'", sync = true)
     public DepartmentRankResponseDto getDepartmentRankingSummary() {
-        // 전체 기록 중 상위 1000개 가져오기 (충분한 표본)
-        List<PracticeSession> allSessions = practiceSessionRepository.findTop1000ByOrderByTimeMsAsc();
+        // 1. 각 학생의 과목 수별 최고 기록 가져오기
+        List<PracticeSession> allBestRecords = practiceSessionRepository.findGlobalRanking();
 
-        List<DepartmentRankResponseDto.RankEntry> ranking = new ArrayList<>();
-        Set<String> seenDepts = new HashSet<>();
-        int rank = 1;
+        // TreeMap을 사용하여 count_N 순서대로 정렬 (key: count_1, count_2, ...)
+        Map<String, List<DepartmentRankResponseDto.RankEntry>> rankingMap = new TreeMap<>(
+                Comparator.comparingInt(s -> Integer.parseInt(s.replace("count_", "")))
+        );
 
-        for (PracticeSession session : allSessions) {
-            Student student = session.getStudent();
-            String dept = student.getDepartment();
+        // 2. 과목 수(countNum) 별로 그룹핑
+        Map<Integer, List<PracticeSession>> byCountNum = allBestRecords.stream()
+                .collect(Collectors.groupingBy(PracticeSession::getCountNum));
 
-            // 이미 랭킹에 등록된 학과는 패스 (학과별 최고 기록만)
-            if (seenDepts.contains(dept)) {
-                continue;
+        byCountNum.forEach((countNum, sessions) -> {
+            // 3. 해당 과목 수 내에서 학과별 최고 기록 찾기
+            Map<String, PracticeSession> deptBestRecord = new HashMap<>();
+            for (PracticeSession s : sessions) {
+                String dept = s.getStudent().getDepartment();
+                if (!deptBestRecord.containsKey(dept) || s.getTimeMs() < deptBestRecord.get(dept).getTimeMs()) {
+                    deptBestRecord.put(dept, s);
+                }
             }
 
-            seenDepts.add(dept);
-            ranking.add(DepartmentRankResponseDto.RankEntry.builder()
-                    .rank(rank++)
-                    .dept(dept)
-                    .bestRecord(DepartmentRankResponseDto.BestRecord.builder()
-                            .name(maskName(student.getName()))
-                            .grade(student.getGrade())
-                            .time(session.getTimeMs())
-                            .build())
-                    .build());
+            // 4. 학과별 최고 기록들을 시간순으로 정렬 (상위 5개)
+            List<PracticeSession> sortedDepts = deptBestRecord.values().stream()
+                    .sorted(Comparator.comparingLong(PracticeSession::getTimeMs))
+                    .limit(5)
+                    .collect(Collectors.toList());
 
-            // 5위까지만 추출
-            if (ranking.size() >= 5) {
-                break;
+            // 5. RankEntry 생성
+            List<DepartmentRankResponseDto.RankEntry> entries = new ArrayList<>();
+            for (int i = 0; i < sortedDepts.size(); i++) {
+                PracticeSession s = sortedDepts.get(i);
+                Student student = s.getStudent();
+                entries.add(DepartmentRankResponseDto.RankEntry.builder()
+                        .rank(i + 1)
+                        .dept(student.getDepartment())
+                        .bestRecord(DepartmentRankResponseDto.BestRecord.builder()
+                                .name(maskName(student.getName()))
+                                .grade(student.getGrade())
+                                .time(s.getTimeMs())
+                                .build())
+                        .build());
             }
-        }
+
+            rankingMap.put("count_" + countNum, entries);
+        });
 
         return DepartmentRankResponseDto.builder()
                 .updatedAt(Instant.now().toEpochMilli())
-                .ranking(ranking)
+                .ranking(rankingMap)
                 .build();
     }
     

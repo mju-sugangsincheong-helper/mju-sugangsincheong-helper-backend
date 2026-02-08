@@ -20,6 +20,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import kr.mmv.mjusugangsincheonghelper.auth.filter.JwtAuthenticationFilter;
 import kr.mmv.mjusugangsincheonghelper.auth.security.JwtAccessDeniedHandler;
 import kr.mmv.mjusugangsincheonghelper.auth.security.JwtAuthenticationEntryPoint;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Arrays;
 import java.util.List;
@@ -34,13 +35,15 @@ public class AuthWebSecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
+    @Value("${app.cors.allowed-origins:*}")
+    private List<String> allowedOrigins;
+
     private static final String[] PUBLIC_URLS = {
             "/api/v1/auth/login",
             "/api/v1/auth/refresh",
             "/api/v1/system/status",
-            "/api/v1/practice/ranks",
-            "/api/v1/stats/subscription",
             "/api/v1/stats/summary",
+            "/api/v1/practice/ranks/summary",
             "/api/v1/notices/**",
             "/api/v1/admin/**",
             "/swagger-ui/**",
@@ -76,7 +79,7 @@ public class AuthWebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedOriginPatterns(allowedOrigins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

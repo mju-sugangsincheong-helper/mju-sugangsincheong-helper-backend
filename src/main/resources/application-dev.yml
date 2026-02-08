@@ -82,7 +82,8 @@ management:
 app:
   jwt:
     secret: ThisIsASecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLongForHS256Algorithm
-    expiration: 3600000   # 1시간
+    expiration: 36000000   # 10시간
+    # expiration: 3600000   # 1시간
     # expiration: 10000   # 10초
     refresh-expiration: 1209600000  # 14일
 
@@ -90,9 +91,19 @@ app:
     base-url: https://mju-univ-auth.shinnk.mmv.kr
     timeout: 30000  # 30초
   
-  statistic:
-    ttl-seconds: 19  # 19초
-  
+  cache:
+    default-ttl-seconds: 60
+    stats-ttl-seconds: 19
+    ranking-ttl-seconds: 30
+    departments-ttl-seconds: 300
+
   # 기능 플래그 설정 : aync 동작 활성화 비활성화
   section-sync:
     enabled: true
+
+  cors:
+    allowed-origins:
+      - "http://localhost:3000"
+      - "http://localhost:5173"
+      - "http://127.0.0.1:3000"
+      - "http://127.0.0.1:5173"

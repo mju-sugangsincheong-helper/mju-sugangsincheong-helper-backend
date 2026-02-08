@@ -25,33 +25,45 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @RequiredArgsConstructor
 public class RedisConfig {
 
+    @org.springframework.beans.factory.annotation.Value("${app.cache.default-ttl-seconds:60}")
+    private long defaultTtl;
+
+    @org.springframework.beans.factory.annotation.Value("${app.cache.stats-ttl-seconds:19}")
+    private long statsTtl;
+
+    @org.springframework.beans.factory.annotation.Value("${app.cache.ranking-ttl-seconds:30}")
+    private long rankingTtl;
+
+    @org.springframework.beans.factory.annotation.Value("${app.cache.departments-ttl-seconds:300}")
+    private long departmentsTtl;
+
     /**
      * CacheManager 설정
-     * - ranking: 30초
-     * - stats: 19초
-     * - default: 60초
+     * - ranking: 주입된 값 (기본 30초)
+     * - stats: 주입된 값 (기본 19초)
+     * - default: 주입된 값 (기본 60초)
      */
     @Bean
     public org.springframework.cache.CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        // 1. 기본 설정 (Default): TTL 60초
+        // 1. 기본 설정 (Default)
         org.springframework.data.redis.cache.RedisCacheConfiguration defaultConfig = 
                 org.springframework.data.redis.cache.RedisCacheConfiguration.defaultCacheConfig()
                 .disableCachingNullValues()
-                .entryTtl(java.time.Duration.ofSeconds(60))
+                .entryTtl(java.time.Duration.ofSeconds(defaultTtl))
                 .serializeKeysWith(org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer(objectMapper())));
 
         // 2. 캐시 이름별 커스텀 TTL 설정
         java.util.Map<String, org.springframework.data.redis.cache.RedisCacheConfiguration> ttlConfigs = new java.util.HashMap<>();
         
-        // [A] 구독 통계 ("stats"): 19초
-        ttlConfigs.put("stats", defaultConfig.entryTtl(java.time.Duration.ofSeconds(19)));
+        // [A] 구독 통계 ("stats")
+        ttlConfigs.put("stats", defaultConfig.entryTtl(java.time.Duration.ofSeconds(statsTtl)));
 
-        // [B] 수강신청 연습 랭킹 ("ranking"): 30초
-        ttlConfigs.put("ranking", defaultConfig.entryTtl(java.time.Duration.ofSeconds(30)));
+        // [B] 수강신청 연습 랭킹 ("ranking")
+        ttlConfigs.put("ranking", defaultConfig.entryTtl(java.time.Duration.ofSeconds(rankingTtl)));
 
-        // [C] 학과 목록 ("departments"): 5분 (학과 정보는 자주 변경되지 않음)
-        ttlConfigs.put("departments", defaultConfig.entryTtl(java.time.Duration.ofMinutes(5)));
+        // [C] 학과 목록 ("departments")
+        ttlConfigs.put("departments", defaultConfig.entryTtl(java.time.Duration.ofSeconds(departmentsTtl)));
 
         return org.springframework.data.redis.cache.RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)

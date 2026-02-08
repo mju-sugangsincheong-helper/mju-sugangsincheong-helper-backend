@@ -55,7 +55,7 @@ public class SectionController {
             ErrorCode.GLOBAL_INTERNAL_SERVER_ERROR
     })
     public ResponseEntity<SingleSuccessResponseEnvelope<SectionResponseDto>> getSectionById(
-            @Parameter(description = "분반번호 (sectioncls)") @PathVariable String sectioncls) {
+            @Parameter(description = "강의번호 (sectioncls)") @PathVariable String sectioncls) {
         SectionResponseDto section = sectionService.getSectionById(sectioncls);
         return ResponseEntity.ok(SingleSuccessResponseEnvelope.of(section));
     }

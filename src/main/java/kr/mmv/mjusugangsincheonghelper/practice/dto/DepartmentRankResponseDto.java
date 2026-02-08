@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Builder
@@ -13,7 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 public class DepartmentRankResponseDto {
     private long updatedAt;
-    private List<RankEntry> ranking;
+    private Map<String, List<RankEntry>> ranking;
 
     @Getter
     @Builder

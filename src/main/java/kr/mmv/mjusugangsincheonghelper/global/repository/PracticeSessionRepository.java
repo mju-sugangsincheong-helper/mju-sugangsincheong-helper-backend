@@ -43,8 +43,8 @@ public interface PracticeSessionRepository extends JpaRepository<PracticeSession
      * 전체 랭킹 조회 (장바구니 개수별 상위 기록)
      */
     @Query(value = "SELECT p.* FROM practice_sessions p " +
-            "INNER JOIN (SELECT count_num, MIN(time_ms) as min_time FROM practice_sessions GROUP BY count_num, student_id) best " +
-            "ON p.count_num = best.count_num AND p.time_ms = best.min_time " +
+            "INNER JOIN (SELECT count_num, student_id, MIN(time_ms) as min_time FROM practice_sessions GROUP BY count_num, student_id) best " +
+            "ON p.count_num = best.count_num AND p.student_id = best.student_id AND p.time_ms = best.min_time " +
             "ORDER BY p.count_num, p.time_ms", nativeQuery = true)
     List<PracticeSession> findGlobalRanking();
 

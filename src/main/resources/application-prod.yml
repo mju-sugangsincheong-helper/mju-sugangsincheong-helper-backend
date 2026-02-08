@@ -9,20 +9,20 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 20
-      minimum-idle: 10
-      idle-timeout: 300000
-      connection-timeout: 20000
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:20}
+      minimum-idle: ${DB_MIN_IDLE:10}
+      idle-timeout: ${DB_IDLE_TIMEOUT:300000}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:20000}
 
   # JPA
   jpa:
     hibernate:
-      ddl-auto: validate
-    show-sql: false
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-    open-in-view: false
+    open-in-view: ${JPA_OPEN_IN_VIEW:false}
 
   # Redis (Production)
   data:
@@ -30,50 +30,59 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
-      timeout: 6000ms
+      timeout: ${REDIS_TIMEOUT:6000ms}
 
 # Server
 server:
   port: ${SERVER_PORT:8080}
   servlet:
-    context-path: /
+    context-path: ${SERVER_CONTEXT_PATH:/}
 
 # Swagger/OpenAPI (Production - disabled)
 springdoc:
   api-docs:
-    enabled: false
+    enabled: ${SPRINGDOC_ENABLED:false}
   swagger-ui:
-    enabled: false
+    enabled: ${SWAGGER_UI_ENABLED:false}
 
 # Logging
 logging:
   level:
-    root: WARN
-    com.example.demo: INFO
+    root: ${LOGGING_LEVEL_ROOT:WARN}
+    com.example.demo: ${LOGGING_LEVEL_APP:INFO}
 
 # Actuator
 management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: ${MANAGEMENT_EXPOSURE_INCLUDE:health}
   endpoint:
     health:
-      show-details: never
+      show-details: ${MANAGEMENT_HEALTH_SHOW_DETAILS:never}
 
 # ===================================
 # 2. Application Custom Settings
 # ===================================
 app:
   jwt:
-    secret: ThisIsASecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLongForHS256Algorithm
-    expiration: 3600000       # 1시간
-    refresh-expiration: 1209600000    # 14일
+    secret: ${JWT_SECRET:ThisIsASecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLongForHS256Algorithm}
+    expiration: ${JWT_EXPIRATION:3600000}       # 1시간
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:1209600000}    # 14일
 
   mju-univ-auth:
-    base-url: https://mju-univ-auth.shinnk.mmv.kr
-    timeout: 30000
+    base-url: ${MJU_UNIV_AUTH_BASE_URL:https://mju-univ-auth.shinnk.mmv.kr}
+    timeout: ${MJU_UNIV_AUTH_TIMEOUT:30000}
+
+  cache:
+    default-ttl-seconds: ${CACHE_DEFAULT_TTL:60}
+    stats-ttl-seconds: ${CACHE_STATS_TTL:19}
+    ranking-ttl-seconds: ${CACHE_RANKING_TTL:30}
+    departments-ttl-seconds: ${CACHE_DEPARTMENTS_TTL:3000}
 
   # 기능 플래그 설정 : aync 동작 활성화 비활성화
   section-sync:
-    enabled: true
+    enabled: ${SECTION_SYNC_ENABLED:true}
+
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://mju-sugangsincheong-helper.mmv.kr}

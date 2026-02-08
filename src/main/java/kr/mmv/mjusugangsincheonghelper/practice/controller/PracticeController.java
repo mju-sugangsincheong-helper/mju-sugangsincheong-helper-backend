@@ -68,7 +68,7 @@ public class PracticeController {
     @GetMapping("/ranks/summary")
     @Operation(
             summary = "학과별 랭킹 요약 조회",
-            description = "전체 기록 중 가장 빠른 기록을 가진 상위 5개 학과를 조회합니다.",
+            description = "과목 수 별로 각 학과의 최고 기록을 비교하여 상위 5개 학과를 조회합니다.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "조회 성공")
             }
