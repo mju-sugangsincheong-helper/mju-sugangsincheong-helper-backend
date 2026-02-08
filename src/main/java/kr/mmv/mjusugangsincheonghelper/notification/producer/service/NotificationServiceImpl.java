@@ -82,7 +82,7 @@ public class NotificationServiceImpl implements NotificationService {
             String body = String.format("%s님 %s 강의에 여석이 %d개 생겼어요", 
                     userName, section.getCurinm(), section.getAvailableSeats());
             
-            return createBasePersonalizedMessage(device.getFcmToken(), title, body, "SECTION_VACANCY", "high");
+            return createBasePersonalizedMessage(device.getFcmToken(), title, body, "SECTION_VACANCY", "HIGH");
         }).collect(Collectors.toList());
     }
 
@@ -100,7 +100,7 @@ public class NotificationServiceImpl implements NotificationService {
             String title = "테스트 알림";
             String body = String.format("%s님 알림이 잘 도착하는거 같아요!!", userName);
             
-            return createBasePersonalizedMessage(device.getFcmToken(), title, body, "TEST", "normal");
+            return createBasePersonalizedMessage(device.getFcmToken(), title, body, "TEST", "NORMAL");
         }).collect(Collectors.toList());
         
         dispatch(testMessages);

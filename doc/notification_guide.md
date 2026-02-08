@@ -1,110 +1,101 @@
 # Notification System Integration Guide
 
-이 문서는 Spring Backend(Manager)와 FastAPI Notification Server(Worker) 간의 **알림 발송 규약(Contract)** 및 **책임 범위**를 정의합니다.
+이 문서는 명지대 수강신청 도우미의 **알림 시스템(Notification System)** 아키텍처, 데이터 규격 및 운영 가이드를 정의합니다. 현재 시스템은 Spring Boot 기반의 Producer-Consumer 패턴을 따르며, Redis를 메시지 브로커로 활용합니다.
 
 ---
 
-## 1. 🏗️ 아키텍처 및 책임 분리
+## 1. 🏗️ 아키텍처 및 흐름 (Architecture Overview)
 
-| 구분 | Spring Boot (Manager) | FastAPI (Worker) |
-| :--- | :--- | :--- |
-| **핵심 역할** | **데이터 관리 & 발송 대상 추출** | **메시지 생성 & FCM 발송** |
-| **책임 1** | 이벤트(여석 발생 등) 감지 | Redis Queue(`mju:notification:dispatch`) 모니터링 |
-| **책임 2** | 구독자(`Subscription`) 및 기기(`StudentDevice`) 조회 | Payload 파싱 및 플랫폼별(`iOS/Android`) 최적화 |
-| **책임 3** | 알림 데이터(JSON) 구성 및 Redis Push | FCM 메시지 객체 생성 (Template 적용) |
-| **책임 4** | `mju:device:cleanup` 큐 모니터링 및 DB 삭제 | 유효하지 않은 토큰(Invalid Token)을 정리 Queue로 반환 |
-| **책임 5** | `mju:notification:status` 키 확인 (Health Check) | 주기적으로 `mju:notification:status` 갱신 (Heartbeat) |
+시스템은 동일한 어플리케이션 내의 `producer` 패키지와 `consumer` 패키지로 분리되어 있으며, Redis Queue를 통해 비동기적으로 통신합니다.
+
+### 🔄 전체 흐름
+1.  **이벤트 발생**: 여석 발생(Vacancy) 또는 테스트 요청 등의 알림 이벤트 발생.
+2.  **Producer (`NotificationService`)**:
+    *   발송 대상(구독자 및 기기 정보)을 조회합니다.
+    *   `FcmMessageDto` 형태의 개인화된 메시지 리스트를 생성합니다.
+    *   Redis Queue(`mju:notification:dispatch`)에 JSON 형태로 `LPUSH`합니다.
+3.  **Redis Queue**: 메시지 임시 저장 및 버퍼 역할.
+4.  **Consumer (`NotificationWorker`)**:
+    *   별도 스레드에서 `BRPOP`을 통해 큐를 상시 모니터링합니다.
+    *   메시지 리스트를 파싱하여 `FcmSenderService`에 전달합니다.
+5.  **FCM 발송 (`FcmSenderService`)**:
+    *   Firebase Admin SDK를 사용하여 FCM 서버로 전송합니다 (Batch Size: 450).
+    *   발송 결과(Response)를 분석하여 유효하지 않은 토큰(Invalid/Unregistered)을 처리합니다.
+6.  **사후 처리**: 유효하지 않은 기기는 DB에서 즉시 비활성화(`is_activated = false`) 처리합니다.
 
 ---
 
 ## 2. 📡 Redis Interface Specification
 
-### 2.1 📤 알림 발송 요청 (Spring -> FastAPI)
+Producer와 Consumer 간의 약속된 데이터 통로입니다.
 
 *   **Key:** `mju:notification:dispatch`
 *   **Type:** `List` (Queue, LPUSH / BRPOP)
-*   **Payload (JSON):**
-
-```json
-{
-  "event_type": "string",       // 알림 종류 (SECTION_VACANCY, NOTICE_NEW 등)
-  "priority": "string",         // 중요도 (HIGH, NORMAL)
-  "common_data": {              // 모든 수신자에게 공통으로 적용되는 변수
-    "key1": "value1",
-    "key2": "value2"
-  },
-  "recipients": [               // 수신자 목록 (Batch Size 450)
-    {
-      "token": "string",        // FCM Token
-      "user_name": "string",    // 사용자 이름 (개인화 메시지용)
-      "platform": "string"      // 기기 플랫폼 (ANDROID, IOS, PC) - 대문자 필수
-    }
-  ]
-}
-```
-
-### 2.2 🧹 토큰 정리 요청 (FastAPI -> Spring)
-
-FastAPI가 발송 중 `Unregistered`, `InvalidRegistration` `NotRegistered` 에러를 FCM으로부터 받으면, 해당 토큰들을 수집하여 이 큐에 넣습니다.
-
-*   **Key:** `mju:device:cleanup`
-*   **Type:** `List` (Queue, LPUSH / BRPOP)
-*   **Payload (JSON Array):** 단순 문자열 리스트
+*   **Payload (JSON):** `List<FcmMessageDto>`
 
 ```json
 [
-  "fcm_token_invalid_1",
-  "fcm_token_invalid_2",
-  "..."
+  {
+    "token": "fcm_token_1",
+    "notification": {
+      "title": "여석 알림",
+      "body": "홍길동님 [컴퓨터알고리즘] 강의에 여석이 1개 생겼어요"
+    },
+    "data": {
+      "type": "SECTION_VACANCY",
+      "urgency": "HIGH",
+      "timestamp": "1707312000"
+    }
+  },
+  ...
 ]
 ```
 
-### 2.3 💓 서버 생존 신고 (FastAPI -> Spring)
+---
 
-FastAPI 서버가 살아있음을 알리는 Heartbeat입니다.
+## 3. 📦 데이터 규격 (FcmMessageDto)
 
-*   **Key:** `mju:notification:status`
-*   **Type:** `String` (SET)
-*   **Value:** "RUNNING" (값 자체는 중요하지 않음)
-*   **TTL (Expiration):** 60초 (FastAPI는 30초마다 갱신해야 함)
+`kr.mmv.mjusugangsincheonghelper.notification.common.dto.FcmMessageDto` 클래스는 FCM `Message` 객체와 1:1 매칭되도록 설계되었습니다.
+
+| 필드 | 타입 | 설명 |
+| :--- | :--- | :--- |
+| `token` | String | 수신 기기의 FCM 토큰 (단일 발송 시 필수) |
+| `topic` | String | 구독 주제 (전체 공지 등 토픽 발송 시 사용) |
+| `notification` | Object | 기본 알림 설정 (title, body, image) |
+| `data` | Map | 클라이언트 앱에서 처리할 커스텀 키-값 데이터 |
+| `webpush` | Object | PWA/브라우저 전송을 위한 상세 설정 (Headers, Actions 등) |
+
+### 💡 주요 설정 (WebPush)
+*   **iOS (PWA) 대응**: `webpush.headers`에 `Urgency: high`를 포함하여 백그라운드 수신 확률을 높입니다.
+*   **인터랙션**: `webpush.fcm_options.link`를 통해 알림 클릭 시 이동할 URL을 지정할 수 있습니다.
 
 ---
 
-## 3. 🐍 FastAPI 처리 로직 (Logic Specification)
+## 4. 🛠️ 구현 및 운영 상세
 
-FastAPI는 `recipients` 배열을 순회하며 개별 메시지를 생성해야 합니다.
+### 4.1 배치 발송 (Batch Processing)
+FCM API는 한 번의 요청에 최대 500개의 메시지를 보낼 수 있습니다. `FcmSenderService`는 안전성을 위해 **450개 단위**로 배치(Batch)를 나누어 `sendEach()` 메서드로 발송합니다.
 
-### 3.1 플랫폼별 처리 규칙
+### 4.2 오류 처리 및 토큰 클린업 (Error Handling)
+발송 결과 중 아래 에러 코드가 포함된 경우, 해당 기기는 더 이상 유효하지 않은 것으로 간주합니다.
+*   `UNREGISTERED`: 사용자가 앱을 삭제하거나 알림 권한을 취소함.
+*   `INVALID_ARGUMENT`: 토큰 형식이 잘못됨.
 
-1.  **IOS (PWA)**
-    *   **헤더 필수:** `Urgency: "high"` (화면 꺼짐 상태에서 수신 위해 필수)
-    *   **Payload:** `notification` 필드 외에 `webpush` 설정에 집중.
-2.  **ANDROID / PC**
-    *   기본 WebPush 설정 사용.
-    *   `icon`, `badge` 등 시각적 요소 포함.
+**처리 로직:**
+1.  `BatchResponse`에서 실패한 응답을 필터링합니다.
+2.  해당 토큰을 가진 `StudentDevice` 엔티티를 조회합니다.
+3.  `deactivate(reason)` 메서드를 호출하여 `is_activated = false`로 변경하고 사유를 기록합니다.
 
-### 3.2 템플릿 처리 (Templating)
-
-*   `event_type`에 매칭되는 텍스트 템플릿을 사용하여 `title`, `body`를 완성합니다.
-*   **변수 치환:** `common_data` + `recipients[i]` 데이터를 합쳐서 `{user_name}`, `{subject_name}` 등을 치환합니다.
+### 4.3 Firebase 설정
+`FcmConfig` 클래스는 `application.yml`의 `app.firebase.config-path`에 설정된 경로의 JSON 키 파일을 로드하여 FirebaseApp을 초기화합니다.
+*   기본 경로: `src/main/resources/mju-sugangsincheong-helper-firebase-adminsdk.json`
 
 ---
 
-## 4. 🛠️ 구현 가이드 (Spring)
+## 5. 🧪 테스트 방법
 
-### Repository 추가 필요
+`NotificationController`의 API를 사용하여 현재 로그인한 사용자의 모든 기기로 테스트 알림을 즉시 보낼 수 있습니다.
 
-`StudentDeviceRepository`에 아래 메서드를 추가하여 N+1 문제 없이 데이터를 조회해야 합니다.
-
-```java
-// StudentDeviceRepository.java
-
-/**
- * 특정 학생들의 모든 기기 정보를 한 번에 가져오기 (Fetch Join)
- * - Platform 정보와 Student Name 정보가 필요하므로 Join Fetch 필수
- */
-@Query("SELECT d FROM StudentDevice d JOIN FETCH d.student WHERE d.student.studentId IN :studentIds")
-List<StudentDevice> findAllByStudentIdIn(@Param("studentIds") List<String> studentIds);
-```
-
-> **주의:** `Student` 엔티티의 PK는 `String` 타입이므로 파라미터도 `List<String>`이어야 합니다.
+*   **Endpoint:** `POST /api/v1/notifications/test`
+*   **Header:** `Authorization: Bearer {JWT_TOKEN}`
+*   **Result**: Redis 큐에 테스트 메시지가 적재되고, 워커가 이를 소비하여 FCM을 발송합니다.
