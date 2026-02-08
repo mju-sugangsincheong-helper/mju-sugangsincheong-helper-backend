@@ -27,8 +27,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<ErrorResponseEnvelope> handleBaseException(BaseException ex) {
-        log.error("BaseException occurred: {}", ex.getErrorCode(), ex);
         ErrorCode errorCode = ex.getErrorCode();
+        log.warn("Business Exception: [{}] {}", errorCode.getCode(), errorCode.getMessage());
         return ResponseEntity
                 .status(errorCode.getStatus())
                 .body(ErrorResponseEnvelope.of(errorCode));

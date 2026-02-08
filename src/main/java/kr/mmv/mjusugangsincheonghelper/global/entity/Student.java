@@ -3,6 +3,7 @@ package kr.mmv.mjusugangsincheonghelper.global.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -19,7 +20,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Student {
+public class Student implements Persistable<String> {
 
     /**
      * 학번 (Primary Key)
@@ -110,7 +111,33 @@ public class Student {
     @Builder.Default
     private List<StudentDevice> devices = new ArrayList<>();
 
+    /**
+     * 개인정보 동의 및 관련 정보
+     */
+    @OneToOne(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    private StudentPrivacy privacy;
+
     // ===== 편의 메서드 =====
+
+    @Override
+    public String getId() {
+        return this.studentId;
+    }
+
+    @Override
+    public boolean isNew() {
+        return this.createdAt == null;
+    }
+
+    /**
+     * 개인정보 동의 설정
+     */
+    public void setPrivacy(StudentPrivacy privacy) {
+        this.privacy = privacy;
+        if (privacy != null) {
+            privacy.setStudent(this);
+        }
+    }
 
     /**
      * 토큰 정보 업데이트

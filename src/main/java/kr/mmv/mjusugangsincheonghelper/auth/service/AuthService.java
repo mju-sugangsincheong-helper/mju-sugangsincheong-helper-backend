@@ -11,6 +11,7 @@ import kr.mmv.mjusugangsincheonghelper.auth.security.JwtTokenProvider;
 import kr.mmv.mjusugangsincheonghelper.global.api.code.ErrorCode;
 import kr.mmv.mjusugangsincheonghelper.global.api.exception.BaseException;
 import kr.mmv.mjusugangsincheonghelper.global.entity.Student;
+import kr.mmv.mjusugangsincheonghelper.global.entity.StudentPrivacy;
 import kr.mmv.mjusugangsincheonghelper.global.repository.PracticeSessionRepository;
 import kr.mmv.mjusugangsincheonghelper.global.repository.StudentDeviceRepository;
 import kr.mmv.mjusugangsincheonghelper.global.repository.StudentRepository;
@@ -35,46 +36,43 @@ public class AuthService {
     private final TimetableRepository timetableRepository;
     private final StudentDeviceRepository studentDeviceRepository;
 
-    private final PrivacyConsentService privacyConsentService;
-
-    @Value("${jwt.expiration:1209600000}")
-    private long expirationMs;  // 14일
+    @Value("${app.jwt.expiration:3600000}")
+    private long expirationMs;
 
     /**
      * 인증 (로그인/회원가입 통합)
-     * 1. 명지대 API로 인증 (MjuUnivAuthService 위임)
-     * 2. DB에 없으면 자동 생성 (신규 사용자일 경우 개인정보 동의 필수)
+     * 1. 명지대 API로 인증
+     * 2. DB 확인 (Phase 1/2/3 분기)
      * 3. JWT 토큰 발급
      */
     @Transactional
-    public TokenResponseDto authenticate(AuthRequestDto request) {
-        // 1. 명지대 인증 API 호출 (MjuUnivAuthService에 위임)
+    public TokenResponseDto authenticate(AuthRequestDto request, String deviceInfo) {
+        // 1. 명지대 인증 API 호출
         MjuUnivAuthService.AuthenticatedStudent authResult = 
                 mjuUnivAuthService.authenticate(request.getUserId(), request.getUserPw());
 
-        Student student;
+        Student student = studentRepository.findById(authResult.getStudentId()).orElse(null);
 
-        // 2. DB에서 사용자 조회
-        if (studentRepository.existsById(authResult.getStudentId())) {
-            // 기존 사용자: 정보 업데이트
-            student = studentRepository.findById(authResult.getStudentId()).get();
-            updateStudentInfo(student, authResult);
-        } else {
-            // 3. 신규 사용자: 개인정보 동의 확인
+        if (student == null) {
+            // [신규 사용자 시나리오]
             if (request.getIsAgreed() == null || !request.getIsAgreed()) {
+                // Phase 1: 가입 여부 탐색 (동의 미포함 시 에러 반환)
+                log.info("New user detected, requesting privacy consent: {}", authResult.getStudentId());
                 throw new BaseException(ErrorCode.AUTH_PRIVACY_POLICY_NOT_AGREED);
             }
 
-            // 학생 생성 및 동의 이력 저장
-            student = createNewStudent(authResult);
-            privacyConsentService.saveConsent(student, "2024.02.08_v1.0", "PRIVACY_POLICY");
+            // Phase 2: 회원가입 및 첫 로그인 (동의 포함 시 생성)
+            student = createNewStudentWithPrivacy(authResult, deviceInfo);
+        } else {
+            // [기존 사용자 시나리오]
+            // Phase 3: 기존 사용자 로그인 및 정보 동기화
+            updateStudentInfo(student, authResult);
         }
 
-        // 4. JWT 토큰 생성
+        // 4. JWT 토큰 생성 및 갱신
         String accessToken = jwtTokenProvider.generateToken(student.getStudentId(), student.getRole());
         String refreshToken = jwtTokenProvider.generateRefreshToken(student.getStudentId());
 
-        // 5. Refresh Token DB 저장
         student.updateTokenInfo(refreshToken);
         studentRepository.save(student);
 
@@ -181,9 +179,9 @@ public class AuthService {
     // ===== Private Methods =====
 
     /**
-     * 신규 사용자 생성
+     * 신규 사용자 및 개인정보 동의 생성
      */
-    private Student createNewStudent(MjuUnivAuthService.AuthenticatedStudent authResult) {
+    private Student createNewStudentWithPrivacy(MjuUnivAuthService.AuthenticatedStudent authResult, String deviceInfo) {
         Student newStudent = Student.builder()
                 .studentId(authResult.getStudentId())
                 .name(authResult.getName())
@@ -195,8 +193,18 @@ public class AuthService {
                 .isActive(true)
                 .build();
 
+        // 개인정보 동의 항목                                                                                                                                                           │
+        String privacyData = String.format("이름, 학년, 학과, 이메일, 기기정보"); 
+
+        StudentPrivacy privacy = StudentPrivacy.builder()
+                .data(privacyData)
+                .isAgreed(true)
+                .build();
+
+        newStudent.setPrivacy(privacy);
+
         Student savedStudent = studentRepository.save(newStudent);
-        log.info("New student created: {} ({})", savedStudent.getStudentId(), savedStudent.getName());
+        log.info("New student signed up: {} ({})", savedStudent.getStudentId(), savedStudent.getName());
 
         return savedStudent;
     }

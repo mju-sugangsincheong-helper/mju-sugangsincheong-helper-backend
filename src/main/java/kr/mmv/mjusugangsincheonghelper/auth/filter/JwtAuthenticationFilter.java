@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import kr.mmv.mjusugangsincheonghelper.auth.security.JwtTokenProvider;
 import kr.mmv.mjusugangsincheonghelper.global.api.code.ErrorCode;
+import kr.mmv.mjusugangsincheonghelper.global.api.exception.BaseException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -43,6 +44,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     log.debug("Set Authentication to security context for '{}', uri: {}",
                             authentication.getName(), request.getRequestURI());
                 }
+            } catch (BaseException e) {
+                log.warn("Business exception in security filter: {}", e.getErrorCode().getMessage());
+                request.setAttribute("jwt_error_code", e.getErrorCode());
             } catch (ExpiredJwtException e) {
                 log.warn("Expired JWT token: {}", e.getMessage());
                 request.setAttribute("jwt_error_code", ErrorCode.AUTH_SECURITY_EXPIRED_TOKEN);
