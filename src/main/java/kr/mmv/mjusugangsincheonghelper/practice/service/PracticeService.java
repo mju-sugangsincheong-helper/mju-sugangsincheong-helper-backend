@@ -12,6 +12,7 @@ import kr.mmv.mjusugangsincheonghelper.practice.dto.PracticeRankResponseDto;
 import kr.mmv.mjusugangsincheonghelper.practice.dto.PracticeRankResponseDto.RankData;
 import kr.mmv.mjusugangsincheonghelper.practice.dto.PracticeRankResponseDto.RankEntry;
 import kr.mmv.mjusugangsincheonghelper.practice.dto.PracticeRecordResponseDto.MyRecord;
+import kr.mmv.mjusugangsincheonghelper.practice.dto.DepartmentRankResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -165,6 +166,47 @@ public class PracticeService {
     private String maskName(String name) {
         if (name == null || name.length() < 2) return name;
         return name.charAt(0) + "*" + name.substring(2); 
+    }
+
+    @Cacheable(value = "ranking", key = "'dept_summary'", sync = true)
+    public DepartmentRankResponseDto getDepartmentRankingSummary() {
+        // 전체 기록 중 상위 1000개 가져오기 (충분한 표본)
+        List<PracticeSession> allSessions = practiceSessionRepository.findTop1000ByOrderByTimeMsAsc();
+
+        List<DepartmentRankResponseDto.RankEntry> ranking = new ArrayList<>();
+        Set<String> seenDepts = new HashSet<>();
+        int rank = 1;
+
+        for (PracticeSession session : allSessions) {
+            Student student = session.getStudent();
+            String dept = student.getDepartment();
+
+            // 이미 랭킹에 등록된 학과는 패스 (학과별 최고 기록만)
+            if (seenDepts.contains(dept)) {
+                continue;
+            }
+
+            seenDepts.add(dept);
+            ranking.add(DepartmentRankResponseDto.RankEntry.builder()
+                    .rank(rank++)
+                    .dept(dept)
+                    .bestRecord(DepartmentRankResponseDto.BestRecord.builder()
+                            .name(maskName(student.getName()))
+                            .grade(student.getGrade())
+                            .time(session.getTimeMs())
+                            .build())
+                    .build());
+
+            // 5위까지만 추출
+            if (ranking.size() >= 5) {
+                break;
+            }
+        }
+
+        return DepartmentRankResponseDto.builder()
+                .updatedAt(Instant.now().toEpochMilli())
+                .ranking(ranking)
+                .build();
     }
     
     private Map<String, List<RankEntry>> recalculateGroupRank(Map<String, List<RankEntry>> original) {
