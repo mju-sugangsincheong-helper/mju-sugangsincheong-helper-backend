@@ -21,4 +21,10 @@ public class AuthRequestDto {
 
     @NotBlank(message = "비밀번호를 입력해주세요")
     private String userPw;
+
+    /**
+     * 개인정보 수집 및 이용 동의 여부
+     * 신규 사용자는 필수 (true)
+     */
+    private Boolean isAgreed;
 }

@@ -9,6 +9,7 @@ import kr.mmv.mjusugangsincheonghelper.global.api.code.ErrorCode;
 import kr.mmv.mjusugangsincheonghelper.global.api.envelope.SingleSuccessResponseEnvelope;
 import kr.mmv.mjusugangsincheonghelper.practice.dto.SubmitPracticeRequestDto;
 import kr.mmv.mjusugangsincheonghelper.practice.dto.PracticeRecordResponseDto;
+import kr.mmv.mjusugangsincheonghelper.practice.dto.DepartmentRankResponseDto;
 import kr.mmv.mjusugangsincheonghelper.practice.dto.PracticeRankResponseDto;
 import kr.mmv.mjusugangsincheonghelper.practice.service.PracticeService;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +62,22 @@ public class PracticeController {
     })
     public ResponseEntity<SingleSuccessResponseEnvelope<PracticeRankResponseDto>> getGlobalRanking() {
         PracticeRankResponseDto response = practiceService.getGlobalRanking();
+        return ResponseEntity.ok(SingleSuccessResponseEnvelope.of(response));
+    }
+
+    @GetMapping("/ranks/summary")
+    @Operation(
+            summary = "학과별 랭킹 요약 조회",
+            description = "전체 기록 중 가장 빠른 기록을 가진 상위 5개 학과를 조회합니다.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "조회 성공")
+            }
+    )
+    @OperationErrorCodes({
+            ErrorCode.GLOBAL_INTERNAL_SERVER_ERROR
+    })
+    public ResponseEntity<SingleSuccessResponseEnvelope<DepartmentRankResponseDto>> getDepartmentRankingSummary() {
+        DepartmentRankResponseDto response = practiceService.getDepartmentRankingSummary();
         return ResponseEntity.ok(SingleSuccessResponseEnvelope.of(response));
     }
 

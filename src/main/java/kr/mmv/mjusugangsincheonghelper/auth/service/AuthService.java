@@ -11,6 +11,7 @@ import kr.mmv.mjusugangsincheonghelper.auth.security.JwtTokenProvider;
 import kr.mmv.mjusugangsincheonghelper.global.api.code.ErrorCode;
 import kr.mmv.mjusugangsincheonghelper.global.api.exception.BaseException;
 import kr.mmv.mjusugangsincheonghelper.global.entity.Student;
+import kr.mmv.mjusugangsincheonghelper.privacy.service.PrivacyConsentService;
 import kr.mmv.mjusugangsincheonghelper.global.repository.PracticeSessionRepository;
 import kr.mmv.mjusugangsincheonghelper.global.repository.StudentDeviceRepository;
 import kr.mmv.mjusugangsincheonghelper.global.repository.StudentRepository;
@@ -35,13 +36,15 @@ public class AuthService {
     private final TimetableRepository timetableRepository;
     private final StudentDeviceRepository studentDeviceRepository;
 
+    private final PrivacyConsentService privacyConsentService;
+
     @Value("${jwt.expiration:1209600000}")
     private long expirationMs;  // 14일
 
     /**
      * 인증 (로그인/회원가입 통합)
      * 1. 명지대 API로 인증 (MjuUnivAuthService 위임)
-     * 2. DB에 없으면 자동 생성
+     * 2. DB에 없으면 자동 생성 (신규 사용자일 경우 개인정보 동의 필수)
      * 3. JWT 토큰 발급
      */
     @Transactional
@@ -50,16 +53,29 @@ public class AuthService {
         MjuUnivAuthService.AuthenticatedStudent authResult = 
                 mjuUnivAuthService.authenticate(request.getUserId(), request.getUserPw());
 
-        // 2. DB에서 사용자 조회 또는 생성
-        Student student = studentRepository.findById(authResult.getStudentId())
-                .map(existingStudent -> updateStudentInfo(existingStudent, authResult))
-                .orElseGet(() -> createNewStudent(authResult));
+        Student student;
 
-        // 3. JWT 토큰 생성
+        // 2. DB에서 사용자 조회
+        if (studentRepository.existsById(authResult.getStudentId())) {
+            // 기존 사용자: 정보 업데이트
+            student = studentRepository.findById(authResult.getStudentId()).get();
+            updateStudentInfo(student, authResult);
+        } else {
+            // 3. 신규 사용자: 개인정보 동의 확인
+            if (request.getIsAgreed() == null || !request.getIsAgreed()) {
+                throw new BaseException(ErrorCode.AUTH_PRIVACY_POLICY_NOT_AGREED);
+            }
+
+            // 학생 생성 및 동의 이력 저장
+            student = createNewStudent(authResult);
+            privacyConsentService.saveConsent(student, "2024.02.08_v1.0", "PRIVACY_POLICY");
+        }
+
+        // 4. JWT 토큰 생성
         String accessToken = jwtTokenProvider.generateToken(student.getStudentId(), student.getRole());
         String refreshToken = jwtTokenProvider.generateRefreshToken(student.getStudentId());
 
-        // 4. Refresh Token DB 저장
+        // 5. Refresh Token DB 저장
         student.updateTokenInfo(refreshToken);
         studentRepository.save(student);
 
@@ -72,9 +88,7 @@ public class AuthService {
      * 토큰 갱신
      */
     @Transactional
-    public TokenResponseDto refreshToken(RefreshTokenRequestDto request) {
-        String refreshToken = request.getRefreshToken();
-
+    public TokenResponseDto refreshToken(String refreshToken) {
         // JWT 토큰 유효성 검증
         if (!jwtTokenProvider.validateToken(refreshToken)) {
             throw new BaseException(ErrorCode.AUTH_SECURITY_INVALID_TOKEN);

@@ -24,6 +24,13 @@ public interface PracticeSessionRepository extends JpaRepository<PracticeSession
     List<PracticeSession> findByStudentOrderByCreatedAtDesc(Student student);
 
     /**
+     * 모든 연습 기록 시간순 조회 (쿼리 최적화: 필요한 필드만 fetch join 고려 가능하나, 여기선 기본 조회)
+     * Limit 처리는 Service 또는 Pageable 사용 권장되나, 현재 요구사항(전체 중 Top 5)에서는 Top N 조회를 위해
+     * 상위 1000개 정도만 가져오도록 제한하는 것이 좋음. -> First1000By
+     */
+    List<PracticeSession> findTop1000ByOrderByTimeMsAsc();
+
+    /**
      * 학생의 과목 수 별 최고 기록 조회
      * (각 count_num 별 가장 빠른 time_ms 기록 조회)
      */

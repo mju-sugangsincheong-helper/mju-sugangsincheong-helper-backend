@@ -9,7 +9,11 @@ import kr.mmv.mjusugangsincheonghelper.auth.service.AuthService;
 import kr.mmv.mjusugangsincheonghelper.global.annotation.OperationErrorCodes;
 import kr.mmv.mjusugangsincheonghelper.global.api.code.ErrorCode;
 import kr.mmv.mjusugangsincheonghelper.global.api.envelope.SingleSuccessResponseEnvelope;
+import kr.mmv.mjusugangsincheonghelper.global.api.exception.BaseException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -27,6 +31,10 @@ public class AuthController {
 
     private final AuthService authService;
 
+
+    @Value("${app.jwt.refresh-expiration:604800000}")
+    private long refreshExpirationMs;
+
     @PostMapping("/login")
     @Operation(
             summary = "로그인 (회원가입 자동 처리)",
@@ -34,7 +42,7 @@ public class AuthController {
                     명지대 학번과 비밀번호로 인증합니다.
                     - 처음 로그인하는 경우 자동으로 회원가입이 진행됩니다.
                     - 학부생(학번이 60으로 시작)만 이용 가능합니다.
-                    - 인증 성공 시 JWT 토큰을 발급합니다. (14일 유효)
+                    - 인증 성공 시 JWT Access Token을 Body로, Refresh Token을 HttpOnly Cookie로 발급합니다.
                     """,
             responses = {
                     @ApiResponse(responseCode = "200", description = "인증 성공")
@@ -51,13 +59,19 @@ public class AuthController {
     public ResponseEntity<SingleSuccessResponseEnvelope<TokenResponseDto>> login(
             @Valid @RequestBody AuthRequestDto request) {
         TokenResponseDto response = authService.authenticate(request);
-        return ResponseEntity.ok(SingleSuccessResponseEnvelope.of(response));
+        
+        // Refresh Token을 HttpOnly Cookie로 설정
+        ResponseCookie cookie = createRefreshTokenCookie(response.getRefreshToken());
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(SingleSuccessResponseEnvelope.of(response));
     }
 
     @PostMapping("/refresh")
     @Operation(
             summary = "토큰 갱신",
-            description = "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급합니다.",
+            description = "쿠키에 담긴 리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급합니다.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "토큰 갱신 성공")
             }
@@ -70,15 +84,26 @@ public class AuthController {
             ErrorCode.GLOBAL_INTERNAL_SERVER_ERROR
     })
     public ResponseEntity<SingleSuccessResponseEnvelope<TokenResponseDto>> refreshToken(
-            @Valid @RequestBody RefreshTokenRequestDto request) {
-        TokenResponseDto response = authService.refreshToken(request);
-        return ResponseEntity.ok(SingleSuccessResponseEnvelope.of(response));
+            @CookieValue(name = "refresh_token", required = false) String refreshToken) {
+            
+        if (refreshToken == null) {
+            throw new BaseException(ErrorCode.AUTH_REFRESH_TOKEN_NOT_FOUND);
+        }
+
+        TokenResponseDto response = authService.refreshToken(refreshToken);
+        
+        // 새 Refresh Token 쿠키 설정
+        ResponseCookie cookie = createRefreshTokenCookie(response.getRefreshToken());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(SingleSuccessResponseEnvelope.of(response));
     }
 
     @PostMapping("/logout")
     @Operation(
             summary = "로그아웃",
-            description = "현재 사용자의 리프레시 토큰을 삭제합니다.",
+            description = "현재 사용자의 리프레시 토큰을 삭제하고 쿠키를 만료시킵니다.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "로그아웃 성공")
             }
@@ -91,7 +116,19 @@ public class AuthController {
     public ResponseEntity<SingleSuccessResponseEnvelope<Void>> logout(
             @AuthenticationPrincipal UserDetails userDetails) {
         authService.logout(userDetails.getUsername());
-        return ResponseEntity.ok(SingleSuccessResponseEnvelope.empty());
+        
+        // 쿠키 삭제 (Max-Age = 0)
+        ResponseCookie cookie = ResponseCookie.from("refresh_token", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Strict")
+                .build();
+                
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(SingleSuccessResponseEnvelope.empty());
     }
 
     @PostMapping("/withdraw")
@@ -114,7 +151,28 @@ public class AuthController {
     public ResponseEntity<SingleSuccessResponseEnvelope<Void>> withdraw(
             @AuthenticationPrincipal UserDetails userDetails) {
         authService.withdraw(userDetails.getUsername());
-        return ResponseEntity.ok(SingleSuccessResponseEnvelope.empty());
+         // 쿠키 삭제 (Max-Age = 0)
+        ResponseCookie cookie = ResponseCookie.from("refresh_token", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Strict")
+                .build();
+                
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(SingleSuccessResponseEnvelope.empty());
+    }
+    
+    private ResponseCookie createRefreshTokenCookie(String refreshToken) {
+        return ResponseCookie.from("refresh_token", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(refreshExpirationMs / 1000) // ms -> s
+                .sameSite("Strict")
+                .build();
     }
 
     @GetMapping("/me")
