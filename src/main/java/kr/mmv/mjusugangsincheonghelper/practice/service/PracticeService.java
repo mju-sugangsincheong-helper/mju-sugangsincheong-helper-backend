@@ -165,7 +165,13 @@ public class PracticeService {
 
     private String maskName(String name) {
         if (name == null || name.length() < 2) return name;
-        return name.charAt(0) + "*" + name.substring(2); 
+        
+        if (name.length() == 2) {
+            return "*" + name.substring(1); // "김철" -> "*철"
+        }
+        
+        // 3자 이상: 앞 2자리 마스킹 ("홍길동" -> "**동", "제갈공명" -> "**공명")
+        return "**" + name.substring(2); 
     }
 
     @Cacheable(value = "ranking", key = "'dept_summary'", sync = true)
