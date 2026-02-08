@@ -27,6 +27,7 @@ public enum ErrorCode {
     AUTH_USER_ALREADY_EXISTS(HttpStatus.CONFLICT, "AUTH_002", "이미 존재하는 사용자입니다"),
     AUTH_REFRESH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH_003", "리프레시 토큰이 만료되었습니다"),
     AUTH_REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "AUTH_004", "리프레시 토큰을 찾을 수 없습니다"),
+    AUTH_PRIVACY_POLICY_NOT_AGREED(HttpStatus.PAYMENT_REQUIRED, "AUTH_005", "개인정보 처리방침 동의가 필요합니다"),
 
     // ===== MJU Univ Auth (External API) =====
     MJU_UNIV_AUTH_INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "MJU_UNIV_AUTH_001", "명지대 인증 실패: 학번 또는 비밀번호를 확인해주세요"),
