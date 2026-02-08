@@ -29,7 +29,11 @@ public class NotificationWorker {
     private final FcmSenderService fcmSenderService;
 
     private static final String DISPATCH_QUEUE = "mju:notification:dispatch";
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r);
+        thread.setName("fcm-dispatcher-1");
+        return thread;
+    });
     private volatile boolean running = true;
 
     @PostConstruct

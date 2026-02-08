@@ -49,7 +49,7 @@ springdoc:
 logging:
   level:
     root: ${LOGGING_LEVEL_ROOT:WARN}
-    com.example.demo: ${LOGGING_LEVEL_APP:INFO}
+    kr.mmv.mjusugangsincheonghelper: ${LOGGING_LEVEL_APP:INFO}
 
 # Actuator
 management:
