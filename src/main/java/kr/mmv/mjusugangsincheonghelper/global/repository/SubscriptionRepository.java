@@ -92,4 +92,23 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
      */
     @Query("SELECT s.user.department, COUNT(DISTINCT s.user) FROM Subscription s WHERE s.user.department IS NOT NULL GROUP BY s.user.department ORDER BY COUNT(DISTINCT s.user) DESC")
     List<Object[]> countByDepartmentTop10();
+
+    /**
+     * 특정 과목(분반)의 총 구독자 수
+     */
+    long countBySectionSectioncls(String sectioncls);
+
+    /**
+     * 특정 과목(분반)의 학년별 구독자 수 그룹핑 조회
+     * SELECT grade, COUNT(*) FROM ... GROUP BY grade
+     */
+    @Query("SELECT s.user.grade, COUNT(DISTINCT s.user) FROM Subscription s WHERE s.section.sectioncls = :sectioncls AND s.user.grade IS NOT NULL GROUP BY s.user.grade")
+    List<Object[]> countBySectionSectionclsGroupByStudentGrade(@Param("sectioncls") String sectioncls);
+
+    /**
+     * 특정 과목(분반)의 학과별 구독자 수 그룹핑 조회
+     * SELECT department, COUNT(*) FROM ... GROUP BY department
+     */
+    @Query("SELECT s.user.department, COUNT(DISTINCT s.user) FROM Subscription s WHERE s.section.sectioncls = :sectioncls AND s.user.department IS NOT NULL GROUP BY s.user.department")
+    List<Object[]> countBySectionSectionclsGroupByStudentDepartment(@Param("sectioncls") String sectioncls);
 }

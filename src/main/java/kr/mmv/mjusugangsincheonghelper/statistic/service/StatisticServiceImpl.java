@@ -6,6 +6,7 @@ import kr.mmv.mjusugangsincheonghelper.global.repository.SectionStatRepository;
 import kr.mmv.mjusugangsincheonghelper.global.repository.SubscriptionRepository;
 import kr.mmv.mjusugangsincheonghelper.statistic.dto.SectionStatResponseDto;
 import kr.mmv.mjusugangsincheonghelper.statistic.dto.SummaryStatsResponseDto;
+import kr.mmv.mjusugangsincheonghelper.statistic.dto.CourseStatisticResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -98,6 +99,33 @@ public class StatisticServiceImpl implements StatisticService {
                 .topDepartments(topDepartments)
                 .updatedAt(System.currentTimeMillis() / 1000)
                 .build();
+    }
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "mju:stats", key = "'course:' + #sectioncls", cacheManager = "cacheManager", sync = true)
+    public CourseStatisticResponseDto getCourseStatistics(String sectioncls) {
+        // 1. 총 구독자 수
+        long totalCount = subscriptionRepository.countBySectionSectioncls(sectioncls);
+
+        // 2. 학년별 통계
+        List<Object[]> gradeStats = subscriptionRepository.countBySectionSectionclsGroupByStudentGrade(sectioncls);
+        Map<String, Long> gradeCounts = new HashMap<>();
+        for (Object[] row : gradeStats) {
+            String grade = (String) row[0];
+            Long count = (Long) row[1];
+            gradeCounts.put(grade, count);
+        }
+
+        // 3. 학과별 통계
+        List<Object[]> deptStats = subscriptionRepository.countBySectionSectionclsGroupByStudentDepartment(sectioncls);
+        Map<String, Long> deptCounts = new HashMap<>();
+        for (Object[] row : deptStats) {
+            String dept = (String) row[0];
+            Long count = (Long) row[1];
+            deptCounts.put(dept, count);
+        }
+
+        return CourseStatisticResponseDto.of(sectioncls, totalCount, gradeCounts, deptCounts);
     }
 }
 
