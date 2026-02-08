@@ -11,7 +11,6 @@ import kr.mmv.mjusugangsincheonghelper.auth.security.JwtTokenProvider;
 import kr.mmv.mjusugangsincheonghelper.global.api.code.ErrorCode;
 import kr.mmv.mjusugangsincheonghelper.global.api.exception.BaseException;
 import kr.mmv.mjusugangsincheonghelper.global.entity.Student;
-import kr.mmv.mjusugangsincheonghelper.privacy.service.PrivacyConsentService;
 import kr.mmv.mjusugangsincheonghelper.global.repository.PracticeSessionRepository;
 import kr.mmv.mjusugangsincheonghelper.global.repository.StudentDeviceRepository;
 import kr.mmv.mjusugangsincheonghelper.global.repository.StudentRepository;
