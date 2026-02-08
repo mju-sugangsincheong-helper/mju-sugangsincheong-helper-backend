@@ -82,7 +82,7 @@ management:
 app:
   jwt:
     secret: ThisIsASecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLongForHS256Algorithm
-    expiration: 1209600000       # 14일 (밀리초)
+    expiration: 10000   # 10초
     refresh-expiration: 1209600000  # 14일
 
   mju-univ-auth:

@@ -1,5 +1,6 @@
 package kr.mmv.mjusugangsincheonghelper.auth.service;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -87,7 +88,13 @@ public class AuthService {
     @Transactional
     public TokenResponseDto refreshToken(String refreshToken) {
         // JWT 토큰 유효성 검증
-        if (!jwtTokenProvider.validateToken(refreshToken)) {
+        try {
+            jwtTokenProvider.validateToken(refreshToken);
+        } catch (ExpiredJwtException e) {
+            log.warn("Refresh token expired: {}", e.getMessage());
+            throw new BaseException(ErrorCode.AUTH_REFRESH_TOKEN_EXPIRED);
+        } catch (Exception e) {
+            log.warn("Invalid refresh token: {}", e.getMessage());
             throw new BaseException(ErrorCode.AUTH_SECURITY_INVALID_TOKEN);
         }
 

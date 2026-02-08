@@ -66,22 +66,11 @@ public class JwtTokenProvider {
     }
 
     public boolean validateToken(String token) {
-        try {
-            Jwts.parser()
-                    .verifyWith(secretKey)
-                    .build()
-                    .parseSignedClaims(token);
-            return true;
-        } catch (SecurityException | MalformedJwtException e) {
-            log.warn("Invalid JWT signature: {}", e.getMessage());
-        } catch (ExpiredJwtException e) {
-            log.warn("Expired JWT token: {}", e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            log.warn("Unsupported JWT token: {}", e.getMessage());
-        } catch (IllegalArgumentException e) {
-            log.warn("JWT claims string is empty: {}", e.getMessage());
-        }
-        return false;
+        Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token);
+        return true;
     }
 
     public boolean isTokenExpired(String token) {
