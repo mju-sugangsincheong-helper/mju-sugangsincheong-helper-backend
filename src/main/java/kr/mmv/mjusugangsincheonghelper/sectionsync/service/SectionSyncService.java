@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import kr.mmv.mjusugangsincheonghelper.global.entity.Section;
 import kr.mmv.mjusugangsincheonghelper.global.repository.SectionRepository;
-import kr.mmv.mjusugangsincheonghelper.notification.service.NotificationService;
+import kr.mmv.mjusugangsincheonghelper.notification.producer.service.NotificationService;
 import kr.mmv.mjusugangsincheonghelper.sectionsync.dto.SectionSyncDataDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

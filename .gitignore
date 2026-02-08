@@ -39,3 +39,7 @@ out/
 
 # mysql
 data/mysql/
+
+
+# firebase admin sdk private key
+src/main/resources/mju-sugangsincheong-helper-firebase-adminsdk.json
