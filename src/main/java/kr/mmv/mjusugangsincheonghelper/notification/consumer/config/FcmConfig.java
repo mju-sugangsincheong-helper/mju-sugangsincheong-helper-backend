@@ -6,6 +6,7 @@ import com.google.firebase.FirebaseOptions;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
@@ -14,6 +15,7 @@ import java.io.InputStream;
 
 @Slf4j
 @Configuration
+@ConditionalOnProperty(value = "app.notification.enabled", havingValue = "true", matchIfMissing = true)
 public class FcmConfig {
 
     @Value("${app.firebase.config-path:mju-sugangsincheong-helper-firebase-adminsdk.json}")

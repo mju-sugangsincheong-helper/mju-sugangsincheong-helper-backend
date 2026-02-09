@@ -97,8 +97,10 @@ app:
     ranking-ttl-seconds: 30
     departments-ttl-seconds: 300
 
-  # 기능 플래그 설정 : aync 동작 활성화 비활성화
+  # 기능 플래그 설정 : aync 동작 활성화 비활성화, 알림 기능 활성화 비활성화
   section-sync:
+    enabled: true
+  notification:
     enabled: true
 
   cors:

@@ -12,6 +12,7 @@ import kr.mmv.mjusugangsincheonghelper.global.repository.SubscriptionRepository;
 import kr.mmv.mjusugangsincheonghelper.notification.common.dto.FcmMessageDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,11 +36,15 @@ public class NotificationServiceImpl implements NotificationService {
     private final SubscriptionRepository subscriptionRepository;
     private final StudentDeviceRepository studentDeviceRepository;
 
+    @Value("${app.notification.enabled:true}")
+    private boolean enabled;
+
     private static final String DISPATCH_QUEUE = "mju:notification:dispatch";
 
     @Override
     @Transactional(readOnly = true)
     public void sendVacancyNotification(List<Section> sections) {
+        if (!enabled) return;
         if (sections == null || sections.isEmpty()) return;
 
         List<String> sectionIds = sections.stream()
@@ -89,6 +94,10 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public void sendTestNotification(String studentId) {
+        if (!enabled) {
+            log.warn("[Producer] Notification is disabled. Skipping test notification for {}", studentId);
+            return;
+        }
         List<StudentDevice> devices = studentDeviceRepository.findActiveByStudentId(studentId);
         
         if (devices.isEmpty()) {

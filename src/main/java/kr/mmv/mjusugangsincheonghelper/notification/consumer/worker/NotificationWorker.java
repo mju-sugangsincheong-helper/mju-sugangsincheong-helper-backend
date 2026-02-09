@@ -8,6 +8,7 @@ import kr.mmv.mjusugangsincheonghelper.notification.common.dto.FcmMessageDto;
 import kr.mmv.mjusugangsincheonghelper.notification.consumer.service.FcmSenderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +23,7 @@ import java.util.concurrent.Executors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(value = "app.notification.enabled", havingValue = "true", matchIfMissing = true)
 public class NotificationWorker {
 
     private final StringRedisTemplate redisTemplate;
