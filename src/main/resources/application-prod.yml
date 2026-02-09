@@ -93,4 +93,4 @@ app:
     enabled: ${NOTIFICATION_ENABLED:true}
 
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://mju-sugangsincheong-helper.mmv.kr}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://msh.mmv.kr}
