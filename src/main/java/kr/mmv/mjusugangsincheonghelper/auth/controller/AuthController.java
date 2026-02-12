@@ -46,6 +46,7 @@ public class AuthController {
         @OperationErrorCodes({
                         ErrorCode.AUTH_PRIVACY_POLICY_NOT_AGREED,
                         ErrorCode.MJU_UNIV_AUTH_INVALID_CREDENTIALS,
+                        ErrorCode.MJU_UNIV_AUTH_LOGIN_LOCKED,
                         ErrorCode.MJU_UNIV_AUTH_NOT_UNDERGRADUATE,
                         ErrorCode.MJU_UNIV_AUTH_INVALID_STUDENT_ID,
                         ErrorCode.MJU_UNIV_AUTH_NETWORK_ERROR,
