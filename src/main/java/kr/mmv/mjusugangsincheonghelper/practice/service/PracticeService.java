@@ -100,7 +100,7 @@ public class PracticeService {
             Map<String, List<RankEntry>> deptRanksRecalculated = recalculateGroupRank(deptRanks);
             Map<String, List<RankEntry>> gradeRanksRecalculated = recalculateGroupRank(gradeRanks);
             
-            if (totalRanks.size() > 100) totalRanks = totalRanks.subList(0, 100);
+            if (totalRanks.size() > 100) totalRanks = new ArrayList<>(totalRanks.subList(0, 100));
 
             data.put("count_" + countNum, RankData.builder()
                     .total(totalRanks)
@@ -245,7 +245,7 @@ public class PracticeService {
                         .time(e.getTime())
                         .build());
             }
-            if (newRankedList.size() > 100) newRankedList = newRankedList.subList(0, 100);
+            if (newRankedList.size() > 100) newRankedList = new ArrayList<>(newRankedList.subList(0, 100));
             result.put(key, newRankedList);
         });
         return result;
