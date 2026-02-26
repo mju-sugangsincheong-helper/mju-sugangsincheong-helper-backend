@@ -118,8 +118,11 @@ public class MjuUnivAuthService {
 
         switch (code) {
             case "INVALID_CREDENTIALS_ERROR":
+                if (message != null && message.contains("로그인 실패 5회")) {
+                    return new BaseException(ErrorCode.MJU_UNIV_AUTH_LOGIN_LOCKED);
+                }
                 return new BaseException(ErrorCode.MJU_UNIV_AUTH_INVALID_CREDENTIALS);
-                
+
             case "NETWORK_ERROR":
             case "SERVICE_UNKNOWN_ERROR":
                 return new BaseException(ErrorCode.MJU_UNIV_AUTH_NETWORK_ERROR);

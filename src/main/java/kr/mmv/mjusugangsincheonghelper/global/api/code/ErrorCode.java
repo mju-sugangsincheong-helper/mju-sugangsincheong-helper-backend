@@ -35,6 +35,7 @@ public enum ErrorCode {
     MJU_UNIV_AUTH_NETWORK_ERROR(HttpStatus.BAD_GATEWAY, "MJU_UNIV_AUTH_003", "명지대 서버 연결에 실패했습니다"),
     MJU_UNIV_AUTH_PARSE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "MJU_UNIV_AUTH_004", "명지대 서버 응답 처리 중 오류가 발생했습니다"),
     MJU_UNIV_AUTH_INVALID_STUDENT_ID(HttpStatus.BAD_REQUEST, "MJU_UNIV_AUTH_005", "유효하지 않은 학번 형식입니다"),
+    MJU_UNIV_AUTH_LOGIN_LOCKED(HttpStatus.FORBIDDEN, "MJU_UNIV_AUTH_006", "로그인 실패 5회로 10분 동안 로그인이 제한됩니다."),
     MJU_UNIV_AUTH_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "MJU_UNIV_AUTH_008", "명지대 인증 서비스가 현재 불안정합니다"),
     MJU_UNIV_AUTH_UNKNOWN_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "MJU_UNIV_AUTH_009", "알 수 없는 명지대 인증 오류가 발생했습니다"),
 
