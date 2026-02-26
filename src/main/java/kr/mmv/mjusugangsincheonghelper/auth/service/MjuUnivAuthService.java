@@ -65,9 +65,12 @@ public class MjuUnivAuthService {
         } catch (HttpStatusCodeException e) {
             // 4xx, 5xx 에러 발생 시: JsonNode로 직접 파싱하여 에러 코드 추출
             String responseBody = new String(e.getResponseBodyAsByteArray(), StandardCharsets.UTF_8);
-            log.warn("[MJU-Auth] HTTP Error {}: {}", e.getStatusCode(), responseBody);
+            // 보안 취약점: 응답 바디 전체를 로깅하면 민감 정보(PW 등)가 노출될 수 있음
+            // log.warn("[MJU-Auth] HTTP Error {}: {}", e.getStatusCode(), responseBody);
             
             String errorCode = extractErrorCode(responseBody);
+            String errorMessage = extractErrorMessage(responseBody);
+            log.warn("[MJU-Auth] HTTP Error {}: code={}, message={}", e.getStatusCode(), errorCode, errorMessage);
 
             // 401 Unauthorized인 경우 에러 코드가 없어도 인증 실패로 간주
             if (errorCode == null && e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
@@ -75,7 +78,6 @@ public class MjuUnivAuthService {
             }
             
             if (errorCode != null) {
-                String errorMessage = extractErrorMessage(responseBody);
                 throw convertToDomainException(errorCode, errorMessage);
             }
 

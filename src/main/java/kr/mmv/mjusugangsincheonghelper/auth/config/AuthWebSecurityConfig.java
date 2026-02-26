@@ -45,13 +45,15 @@ public class AuthWebSecurityConfig {
             "/api/v1/stats/summary",
             "/api/v1/practice/ranks/summary",
             "/api/v1/notices/**",
+            /* 보안 취약점: admin 및 actuator 엔드포인트는 인증이 필요하므로 제거
             "/api/v1/admin/**",
+            "/actuator/**",
+            */
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/v3/api-docs/**",
             "/swagger-resources/**",
             "/webjars/**",
-            "/actuator/**",
             "/error"
 
     };
