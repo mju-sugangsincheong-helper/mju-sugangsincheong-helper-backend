@@ -73,8 +73,8 @@ management:
 app:
   jwt:
     secret: ${JWT_SECRET:ThisIsASecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLongForHS256Algorithm}
-    expiration: ${JWT_EXPIRATION:3600000}       # 1시간
-    refresh-expiration: ${JWT_REFRESH_EXPIRATION:1209600000}    # 14일
+    expiration: ${JWT_EXPIRATION:600000}       # 10분
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}    # 7일
 
   mju-univ-auth:
     base-url: ${MJU_UNIV_AUTH_BASE_URL:https://mju-univ-auth.shinnk.mmv.kr}
