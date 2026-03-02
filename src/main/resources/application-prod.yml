@@ -32,11 +32,19 @@ spring:
       # password: ${REDIS_PASSWORD:}
       timeout: ${REDIS_TIMEOUT:6000ms}
 
+  # 30초 이상 걸리는 요청이 있을 때, 애플리케이션이 종료 신호를 수신하면 해당 요청을 강제로 중단하고 프로세스를 종료합니다.
+  lifecycle:
+    timeout-per-shutdown-phase: ${LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE:30s}
+
 # Server
 server:
   port: ${SERVER_PORT:8080}
   servlet:
     context-path: ${SERVER_CONTEXT_PATH:/}
+  # 신규 요청 차단: 종료 신호 수신 직후 애플리케이션은 더 이상 새로운 외부 요청을 받지 않고 즉시 거절합니다.
+  # 기존 요청 대기: 종료 시점까지 이미 수락하여 처리 중인 요청들은 완료될 때까지 안전하게 대기합니다.
+  # 강제 종료: 설정한 대기 시간이 초과되면 처리 중인 요청이라도 강제로 중단하고 프로세스를 종료합니다.
+  shutdown: graceful # 애플리케이션 종료 시 안전 종료 
 
 # Swagger/OpenAPI (Production - disabled)
 springdoc:
